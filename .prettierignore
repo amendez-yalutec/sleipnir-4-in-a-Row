@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+package-lock.json
+
+# Contrato oficial del árbitro: se conserva tal como lo entregan los organizadores.
+spec/
+
+# La documentación se formatea a mano (Prettier realinearía las tablas de los planes).
+*.md
+evidencias/
+playwright-report/
+test-results/
