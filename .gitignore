@@ -1,0 +1,30 @@
+# Dependencias y builds
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Secretos: el token del equipo vive solo aquí
+.env
+.env.*
+!.env.example
+
+# Logs del bot y de herramientas
+logs/
+*.log
+
+# Sistema y editores
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Coordinación interna del equipo (no es entregable)
+RESUMEN_PARA_EL_EQUIPO.md
+
+# Pruebas E2E / capturas temporales
+playwright-report/
+test-results/
+
+# Evidencias de las corridas E2E (capturas, videos y reportes): se comparten aparte
+evidencias/
