@@ -1,0 +1,13 @@
+{
+  "name": "@equipo6/engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reglas y búsqueda de Cuatro en línea 8×7. Puro: sin red, sin fs, sin process.env.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}
