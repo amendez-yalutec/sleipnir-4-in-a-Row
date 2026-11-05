@@ -23,7 +23,7 @@ export interface ApiClient {
     signal?: AbortSignal,
   ): Promise<ApiResult<GameState>>;
   health(signal?: AbortSignal): Promise<ApiResult<Health>>;
-  /** Estado del bot del torneo; falla con 404 donde no se puede controlar (Vercel). */
+  /** Estado del bot del torneo; falla con 404 si el servidor no permite controlarlo. */
   control(signal?: AbortSignal): Promise<ApiResult<ControlStatus>>;
   /** Inicia la escucha del torneo con la URL y el token del panel "Mi equipo" (solo en la laptop). */
   startListening(url: string, token: string): Promise<ApiResult<ControlStatus>>;

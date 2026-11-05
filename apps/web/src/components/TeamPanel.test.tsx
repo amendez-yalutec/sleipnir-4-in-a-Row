@@ -175,7 +175,7 @@ describe('panel Mi equipo', () => {
     expect(client.calls).toContain('stop');
   });
 
-  it('donde no se puede controlar (Vercel), la tarjeta no aparece', async () => {
+  it('si el servidor no permite controlar el bot, la tarjeta no aparece', async () => {
     openPanel(fakeArbiter());
     await connect();
     await screen.findByRole('heading', { name: 'Equipo 6' });

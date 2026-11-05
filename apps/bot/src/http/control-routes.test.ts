@@ -110,7 +110,7 @@ describe('control del bot del torneo', () => {
     expect(same.statusCode).toBe(200);
   });
 
-  it('sin controlador (la función de Vercel) las rutas no existen', async () => {
+  it('sin controlador las rutas no existen', async () => {
     const app = await start(false);
     expect((await app.inject({ url: '/api/control' })).statusCode).toBe(404);
   });

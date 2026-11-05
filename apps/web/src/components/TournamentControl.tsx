@@ -1,7 +1,7 @@
 /**
  * Iniciar y detener la escucha del bot del torneo desde la web. El bot (y su cómputo) corre en el
  * servidor de esta computadora; la página solo manda la orden y muestra el estado. Donde no se puede
- * controlar (la app en Vercel), la tarjeta no aparece.
+ * controlar (el servidor no ofrece `/api/control`), la tarjeta no aparece.
  */
 import type { ControlStatus } from '@equipo6/contracts';
 import { useCallback, useEffect, useState } from 'react';

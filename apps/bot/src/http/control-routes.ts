@@ -1,7 +1,7 @@
 /**
  * Control del bot del torneo desde la web (panel "Mi equipo"): `GET /api/control`,
  * `POST /api/control/start` y `POST /api/control/stop`. Solo existen en el servidor de la laptop
- * (`main.ts`); la función de Vercel no las registra.
+ * (`main.ts`); `buildAppServer` sin `control` no las registra.
  *
  * Seguridad (además de los controles generales de `security.ts`):
  * - solo desde esta computadora: la IP de la petición debe ser loopback, aunque `HOST=0.0.0.0`;
