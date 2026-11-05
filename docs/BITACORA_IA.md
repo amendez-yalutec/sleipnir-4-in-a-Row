@@ -385,3 +385,19 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
     para leerse en el tema claro y en el oscuro de GitHub.
 - **Cómo lo verificamos:** enlaces y anclas del README revisados con un script (54 enlaces, 0 rotos),
   SVG válidos como XML, lint, tipos y pruebas en verde.
+
+### 2026-11-04 — App web jugable en Vercel
+
+- **Quién / herramienta:** Alberto Mendez / Claude Code.
+- **Pedido:** desplegar la app web en Vercel y que se pueda jugar, no solo ver.
+- **Qué devolvió:**
+  - la observación de que la web sola no juega (pide todo a `/api/game/*`, invariante 4) y que Vercel no
+    levanta el servidor de `npm run bot`;
+  - una función de Vercel que reutiliza `buildAppServer` con el mismo motor y contratos, sus pruebas y
+    un build con la Build Output API que empaqueta la función con `rolldown` (ya venía con Vite).
+- **Qué salió mal y cómo se detectó:** el primer bundle agregaba un `createRequire` propio que rolldown
+  ya inyecta; Node rechazó el archivo (`Identifier 'createRequire' has already been declared`). Se vio al
+  correr la función empaquetada fuera del repo, sin `node_modules`, y se quitó.
+- **Cómo lo verificamos:** pruebas de `apps/bot/src/vercel/handler.test.ts` y la función empaquetada
+  corrida sola: `health`, `state`, `bot-move` en los tres niveles (Difícil tarda ~1.8 s y bloquea la línea
+  de tres), jugada ilegal → 400, torneo sin `ARBITRO_URL` → 503 y CSP en cada respuesta.
