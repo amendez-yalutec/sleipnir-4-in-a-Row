@@ -3,7 +3,7 @@ import { fallbackChooser } from '../chooser/fallback.ts';
 import type { MoveChooser } from '../chooser/types.ts';
 import type { Level } from '../log.ts';
 import { ArbiterHttpError } from './client.ts';
-import { SAFETY_MARGIN_MS, type TurnDeps, budgetFor, playTurn } from './play-turn.ts';
+import { SAFETY_MARGIN_MS, type TurnDeps, budgetFor, piecesOn, playTurn } from './play-turn.ts';
 import { type ArbiterTurn, type HttpResponse, parseNext } from './schema.ts';
 
 const EMPTY = Array.from({ length: 7 }, () => Array<number>(8).fill(0));
@@ -61,7 +61,27 @@ function setup(options: { chooser?: MoveChooser; replies?: MoveReply[]; clock?: 
 describe('presupuesto', () => {
   it('con 3,000 ms: soft 1,400 y hard 1,800; se adapta si cambia deadline_ms', () => {
     expect(budgetFor(3_000, 1_400, 1_800)).toEqual({ softMs: 1_400, hardMs: 1_800 });
-    expect(budgetFor(2_000, 1_400, 1_800)).toEqual({ softMs: 940, hardMs: 1_200 });
+    // Topes nuevos: hard ≤ 0.72 · plazo y soft ≤ 0.6 · plazo (antes 0.6 y 0.47).
+    expect(budgetFor(2_000, 1_400, 1_800)).toEqual({ softMs: 1_200, hardMs: 1_440 });
+    // Aunque se configure de más, nunca pasa de 2,160 ms con el plazo de 3 s.
+    expect(budgetFor(3_000, 2_500, 2_800)).toEqual({ softMs: 1_800, hardMs: 2_160 });
+  });
+
+  it('reparte el tiempo por fase: poco en la apertura, todo en el medio juego', () => {
+    expect(budgetFor(3_000, 1_800, 2_200, 0)).toEqual({ softMs: 1_080, hardMs: 2_160 });
+    expect(budgetFor(3_000, 1_800, 2_200, 5)).toEqual({ softMs: 1_080, hardMs: 2_160 });
+    expect(budgetFor(3_000, 1_800, 2_200, 6)).toEqual({ softMs: 2_160, hardMs: 2_160 });
+    expect(budgetFor(3_000, 1_800, 2_200, 24)).toEqual({ softMs: 2_160, hardMs: 2_160 });
+    expect(budgetFor(3_000, 1_800, 2_200, 25)).toEqual({ softMs: 1_800, hardMs: 2_160 });
+  });
+
+  it('cuenta las fichas del tablero', () => {
+    expect(piecesOn(EMPTY)).toBe(0);
+    const board = EMPTY.map((row) => [...row]);
+    board[0][3] = 1;
+    board[0][4] = 2;
+    board[1][3] = 1;
+    expect(piecesOn(board)).toBe(3);
   });
 });
 

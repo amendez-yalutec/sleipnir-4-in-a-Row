@@ -25,12 +25,33 @@ const MAX_ATTEMPTS = 3;
 /** El hilo principal no espera a la búsqueda más de `hard` + este margen. */
 export const SAFETY_MARGIN_MS = 100;
 
-/** `soft = min(THINK_SOFT_MS, 0.47 · deadline)`, `hard = min(THINK_HARD_MS, 0.6 · deadline)`. */
-export function budgetFor(deadlineMs: number, softMs: number, hardMs: number): Budget {
-  return {
-    softMs: Math.min(softMs, Math.floor(0.47 * deadlineMs)),
-    hardMs: Math.min(hardMs, Math.floor(0.6 * deadlineMs)),
-  };
+/** Las primeras jugadas (apertura) gastan poco: casi todas las posiciones son conocidas y parejas. */
+export const OPENING_PLIES = 6;
+/** Hasta aquí va el medio juego, donde se decide la partida: ahí se usa el tiempo completo. */
+export const MIDGAME_LAST_PLY = 24;
+
+/** Fichas en el tablero (= jugadas hechas). */
+export function piecesOn(board: readonly (readonly number[])[]): number {
+  return board.reduce((total, row) => total + row.filter((cell) => cell !== 0).length, 0);
+}
+
+/**
+ * Presupuesto del turno según el plazo y la fase. Topes: `hard ≤ 0.72 · deadline` (2,160 de 3,000:
+ * con el margen de seguridad y la red queda ~0.6 s antes del plazo) y `soft ≤ 0.6 · deadline`.
+ * Sin `plies` usa `soft` tal cual; con `plies`: apertura `0.6 · soft`, medio juego `soft = hard`
+ * (empieza profundidades nuevas hasta `hard / 2`), final `soft` (casi siempre ya está resuelto).
+ */
+export function budgetFor(
+  deadlineMs: number,
+  softMs: number,
+  hardMs: number,
+  plies?: number,
+): Budget {
+  const hard = Math.min(hardMs, Math.floor(0.72 * deadlineMs));
+  const soft = Math.min(softMs, Math.floor(0.6 * deadlineMs), hard);
+  if (plies === undefined || plies > MIDGAME_LAST_PLY) return { softMs: soft, hardMs: hard };
+  if (plies < OPENING_PLIES) return { softMs: Math.floor(0.6 * soft), hardMs: hard };
+  return { softMs: hard, hardMs: hard };
 }
 
 type Source = 'busqueda' | 'unica' | 'respaldo' | 'temporizador';
@@ -91,7 +112,12 @@ export async function playTurn(deps: TurnDeps, turn: ArbiterTurn, receivedAt: nu
   for (const warning of turn.warnings)
     deps.log('warn', 'turno_inconsistente', { ...base, warning });
 
-  const budget = budgetFor(turn.deadlineMs, deps.thinkSoftMs, deps.thinkHardMs);
+  const budget = budgetFor(
+    turn.deadlineMs,
+    deps.thinkSoftMs,
+    deps.thinkHardMs,
+    turn.position ? piecesOn(turn.position.board) : undefined,
+  );
   const decided = await choose(deps, turn, budget);
   const guarded = guardColumn(decided.column, turn.legalMoves);
   if (guarded.column === null) {

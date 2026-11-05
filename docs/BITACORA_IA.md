@@ -495,3 +495,10 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
   bot») se comparó con el código de `apps/web/src`, y lo que hacen Deshacer y Reiniciar con
   `game/reducer.ts`; los niveles, con el README. Enlaces e imágenes revisados con un script.
 
+
+- **5 nov, 9:10 — tiempo de búsqueda por fase.** Al analizar 13 partidas (13 ganadas) se vio que el bot
+  pensaba 0.8–1.5 s cuando el plazo es 3 s, y que con 2.5 s el motor cambiaba 2–3 jugadas del medio
+  juego. Hallazgo: subir `THINK_*` no bastaba, porque `budgetFor` recortaba a 0.47/0.6 del plazo. Error
+  de la IA: al principio propuso cambiar solo el `.env`. Arreglo: topes 0.6/0.72 (máximo 2,160 ms),
+  apertura con 0.6 · soft y medio juego (jugadas 6–24) con soft = hard; valores por defecto 1800/2200.
+  Medición en la laptop del torneo: peor búsqueda 1,867 ms.
