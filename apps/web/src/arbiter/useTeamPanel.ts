@@ -7,6 +7,9 @@ import { type ArbiterClient, ArbiterError, type HouseBot, createArbiterClient } 
 import { type ArbiterConfig, loadConfig, saveConfig } from './config.ts';
 import type { GameSummary, Me } from './schema.ts';
 
+/** Cada cuánto se vuelve a pedir el estado del equipo y sus partidas. */
+export const TEAM_POLL_MS = 3_000;
+
 export type Notice = { readonly tone: 'ok' | 'error'; readonly text: string } | null;
 
 export interface TeamPanelState {
@@ -72,15 +75,22 @@ export function useTeamPanel(
     setLoading(false);
   }, []);
 
-  // Al cambiar la configuración se vuelve a consultar; una respuesta vieja no pisa a la nueva.
+  // Al cambiar la configuración se vuelve a consultar, y luego cada TEAM_POLL_MS: las partidas que
+  // crean otros (amistosos, liga, playoffs) aparecen solas. Una respuesta vieja no pisa a la nueva.
   useEffect(() => {
     if (!client) return;
     let current = true;
-    void fetchSnapshot(client, config).then((snapshot) => {
-      if (current) apply(snapshot);
-    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = () =>
+      void fetchSnapshot(client, config).then((snapshot) => {
+        if (!current) return;
+        apply(snapshot);
+        timer = setTimeout(poll, TEAM_POLL_MS);
+      });
+    poll();
     return () => {
       current = false;
+      clearTimeout(timer);
     };
   }, [client, config, apply]);
 

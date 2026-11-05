@@ -277,4 +277,19 @@ describe('panel Mi equipo', () => {
     expect(await screen.findByRole('heading', { name: 'Partida g_1' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Ver tablero de g_1' }).textContent).toBe('Viendo');
   });
+
+  it('una partida que crea otro equipo (amistoso o liga) aparece sola y se abre en vivo', async () => {
+    const friendly = { ...detail('g_amistoso', false), kind: 'friendly', board: undefined };
+    let created = false;
+    const teamGames = vi.fn(() => Promise.resolve(created ? [friendly] : []));
+    openPanel(fakeArbiter({ teamGames, game: (id: string) => Promise.resolve(detail(id, false)) }));
+    await connect();
+    await waitFor(() => expect(teamGames).toHaveBeenCalled());
+    expect(screen.queryByRole('heading', { name: 'Partida g_amistoso' })).toBeNull();
+
+    created = true; // el árbitro crea la partida sin que el panel haga nada
+    expect(
+      await screen.findByRole('heading', { name: 'Partida g_amistoso' }, { timeout: 5000 }),
+    ).toBeTruthy();
+  }, 10_000);
 });
