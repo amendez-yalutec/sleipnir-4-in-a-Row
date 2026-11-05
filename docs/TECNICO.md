@@ -121,6 +121,7 @@ _pendiente_).
 | B8: workers + logs a archivo | los workers se adelantaron con B9; los logs JSONL a archivo siguen pendientes | la API de la app no podía correr búsquedas en el hilo del torneo |
 | §7: niveles "Fácil / Medio / Difícil" | en el contrato se llaman `easy` / `medium` / `hard` | identificadores en inglés (`AGENTS.md`); la web muestra los nombres en español |
 | §7: `GET /api/tournament/games` "desde los logs" | se arma con la ruta pública `GET /api/games` del árbitro (OpenAPI 1.0.1), filtrada por `TEAM_ID` | funciona también en la máquina de demo, que no tiene token ni logs del torneo |
+| Invariante 2 (JSON del árbitro solo en `apps/bot/src/arbiter/schema.ts`) | el panel "Mi equipo" consulta el árbitro desde el navegador; su JSON se interpreta solo en `apps/web/src/arbiter/schema.ts` | el equipo quería ver posición, crear prácticas y registrar la entrega desde la web con su token, sin pasar el token por nuestra API. La CSP abre `connect-src` a `https:` y al árbitro simulado local |
 | §7: la app se juega en la misma computadora o en la red local | además se puede desplegar en Vercel: la web como estáticos y la API de la app como una función que reutiliza `buildAppServer` (`apps/bot/src/vercel/handler.ts`, `scripts/vercel-build.ts`) | jugarla en línea sin la laptop prendida. En la función la búsqueda corre en su hilo (no hay workers), el rate limit es por instancia y no hay ciclo contra el árbitro |
 
 ## 6. API de la app

@@ -45,6 +45,14 @@ async function startMock(faults: FaultOptions = {}) {
   return { ...built, url };
 }
 
+/**
+ * Margen para que llegue la respuesta de la última jugada antes de cortar el ciclo. El mock da la
+ * partida por terminada al registrar la jugada, antes de que el bot reciba el 200; si el ciclo se
+ * corta en ese instante, el POST en vuelo se cancela y la jugada queda "sin confirmar" aunque el
+ * bot jugó bien. En el torneo real nadie corta el ciclo al terminar una partida.
+ */
+const SETTLE_MS = 500;
+
 /** Corre el ciclo hasta que todas las partidas terminen (o se agote el tiempo de la prueba). */
 async function playUntilFinished(
   arbiter: MockArbiter,
@@ -52,8 +60,11 @@ async function playUntilFinished(
   gameIds: string[],
 ) {
   const controller = new AbortController();
+  let settle: ReturnType<typeof setTimeout> | undefined;
   const watcher = setInterval(() => {
-    if (gameIds.every((id) => arbiter.getGame(id)?.result)) controller.abort();
+    if (settle === undefined && gameIds.every((id) => arbiter.getGame(id)?.result)) {
+      settle = setTimeout(() => controller.abort(), SETTLE_MS);
+    }
   }, 20);
   try {
     return await runArbiterLoop({
@@ -63,6 +74,7 @@ async function playUntilFinished(
     });
   } finally {
     clearInterval(watcher);
+    clearTimeout(settle);
   }
 }
 
