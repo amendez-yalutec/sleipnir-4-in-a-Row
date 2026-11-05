@@ -1,4 +1,4 @@
-import type { Position } from '@equipo6/engine';
+import { type Position, replay } from '@equipo6/engine';
 import { describe, expect, it } from 'vitest';
 import { fallbackChooser } from '../chooser/fallback.ts';
 import type { MoveChooser } from '../chooser/types.ts';
@@ -87,6 +87,18 @@ describe('presupuesto', () => {
 });
 
 describe('un turno', () => {
+  it('en una posición del libro juega la del libro sin buscar', async () => {
+    const moves = [3, 3, 3, 3, 3, 4, 4, 4, 4, 6, 7, 1, 4, 4, 3, 1, 4];
+    const state = replay(moves);
+    const arbiterBoard = state.board.map((row) => [...row]);
+    const chooser: MoveChooser = { choose: () => Promise.reject(new Error('no debería buscar')) };
+    const turn = turnFrom({ board: arbiterBoard, you: 2, legal_moves: [0, 1, 2, 3, 5, 6, 7] });
+    const { deps, sent, logs } = setup({ chooser });
+    await playTurn(deps, turn, 0);
+    expect(sent[0]?.column).toBe(1);
+    expect(logs.at(-1)).toMatchObject({ event: 'jugada', data: { source: 'libro' } });
+  });
+
   it('tras una jugada aceptada piensa en el turno del rival (y no si la partida terminó)', async () => {
     const pondered: Position[] = [];
     const chooser: MoveChooser = {

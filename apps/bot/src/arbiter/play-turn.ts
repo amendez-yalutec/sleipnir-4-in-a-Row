@@ -3,6 +3,7 @@
  * Todo el tiempo se mide desde que se **recibió** el turno (invariante 6), nunca contra `served_at`.
  */
 import { play } from '@equipo6/engine';
+import { bookMove } from '../chooser/book.ts';
 import { fallbackMove } from '../chooser/fallback.ts';
 import type { Budget, Choice, MoveChooser } from '../chooser/types.ts';
 import type { Logger } from '../log.ts';
@@ -55,13 +56,15 @@ export function budgetFor(
   return { softMs: hard, hardMs: hard };
 }
 
-type Source = 'busqueda' | 'unica' | 'respaldo' | 'temporizador';
+type Source = 'busqueda' | 'unica' | 'respaldo' | 'temporizador' | 'libro';
 
 async function choose(deps: TurnDeps, turn: ArbiterTurn, budget: Budget) {
   const { position, legalMoves } = turn;
   const fallback = () => (position ? fallbackMove(position, legalMoves) : mostCentral(legalMoves));
   if (legalMoves.length === 1) return { column: legalMoves[0] ?? null, source: 'unica' as Source };
   if (!position) return { column: fallback(), source: 'respaldo' as Source };
+  const book = bookMove(position, legalMoves);
+  if (book !== null) return { column: book, source: 'libro' as Source };
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   const safety = new Promise<null>((resolve) => {

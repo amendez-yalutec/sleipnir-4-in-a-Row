@@ -509,3 +509,10 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
   la IA atrapado por las pruebas: si la bandera de corte ya estaba puesta al arrancar, el reloj devolvía
   `Infinity` como hora de inicio y el plazo también era `Infinity`, así que la búsqueda no se cortaba.
   Arreglo: la primera lectura del reloj siempre es real y, con la bandera puesta, no se busca.
+
+- **5 nov, 9:50 — libro contra la línea de Odd Times.** Odd Times nos ganó tres amistosos con la misma
+  línea (`g_f7ea9774` y sus espejos `g_5dc8ef68`, `g_e572f8e2`): el bot es determinista y repetía la
+  jugada 18 perdedora. Con 9 s por jugada, las columnas 1, 2 y 8 de esa posición son victoria
+  demostrada a 34 jugadas; ni con más tiempo ni pensando en el turno del rival el motor la encontraba
+  (llegaba a profundidad 25). Se agregó `apps/bot/src/chooser/book.ts` con esa posición y su espejo.
+  Verificado: tras la jugada del libro, el bot con 2,160 ms le gana a nuestro motor con 4.5 s.
