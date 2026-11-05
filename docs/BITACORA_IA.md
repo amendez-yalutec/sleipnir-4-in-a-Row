@@ -477,3 +477,9 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
   CORS del mock (preflight local, lectura local y otros orígenes sin permiso). Corrida real con Playwright
   y Chrome: guardar la conexión, iniciar la escucha, práctica `g_p_01` ganada a casa-basico en el tablero
   en vivo, detener la escucha y 0 errores de consola.
+
+- **5 nov, 8:50 — el panel no mostraba los amistosos de otros equipos.** El bot jugaba (se veía en el
+  tablero oficial), pero "Mi equipo" solo pedía la lista de partidas al guardar la configuración o al
+  crear una práctica; las partidas creadas por otros (amistosos, liga, playoffs) no aparecían hasta
+  recargar. Error de la IA: asumió que todas las partidas nacían desde el panel. Arreglo: el panel
+  vuelve a consultar al árbitro cada 3 s (`TEAM_POLL_MS`), con prueba que falla sin el cambio.
