@@ -65,11 +65,14 @@ export interface TeamPanelProps {
 export function TeamPanel({ api, makeClient }: TeamPanelProps) {
   const { state, client, save, refresh, practice, submit } = useTeamPanel(makeClient);
   const { config, me, games, notice } = state;
-  // Partida en el tablero: la que eligió la persona o, si no, la que el equipo está jugando.
+  // Partida en el tablero, por prioridad: la que eligió la persona con un clic; si no, la que el
+  // equipo está jugando; si no, la última que terminó en pantalla (para ver el resultado). Una
+  // partida terminada nunca tapa a una nueva en curso.
   const [chosen, setChosen] = useState<string | null>(null);
+  const [finishedShown, setFinishedShown] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
   const live = games.find((game) => game.status === 'playing' && game.game_id !== dismissed);
-  const shown = chosen ?? live?.game_id ?? null;
+  const shown = chosen ?? live?.game_id ?? finishedShown;
 
   return (
     <div className="space-y-6">
@@ -96,11 +99,12 @@ export function TeamPanel({ api, makeClient }: TeamPanelProps) {
           teamId={config.teamId}
           onClose={() => {
             setChosen(null);
+            setFinishedShown(null);
             setDismissed(shown);
           }}
           onFinished={() => {
-            // Se queda abierta con el resultado aunque ya no esté "en curso".
-            setChosen(shown);
+            // Se queda con el resultado hasta que aparezca otra partida en curso.
+            if (chosen !== shown) setFinishedShown(shown);
             void refresh();
           }}
         />
@@ -139,7 +143,12 @@ export function TeamPanel({ api, makeClient }: TeamPanelProps) {
       {me && (
         <TeamActions
           open={state.phase === 'practice'}
-          onPractice={(opponent, first) => void practice(opponent, first)}
+          onPractice={(opponent, first) => {
+            // La práctica nueva pasa al tablero en cuanto aparece en la lista.
+            setChosen(null);
+            setFinishedShown(null);
+            void practice(opponent, first);
+          }}
           onSubmit={(repoUrl, commit) => void submit(repoUrl, commit)}
         />
       )}

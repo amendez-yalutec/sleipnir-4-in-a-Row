@@ -226,4 +226,34 @@ describe('panel Mi equipo', () => {
     expect(screen.getByRole('heading', { name: 'Partida g_p_10' })).toBeTruthy();
     expect(teamGames.mock.calls.length).toBeGreaterThan(before);
   });
+
+  it('al crear otra práctica, el tablero pasa de la partida terminada a la nueva', async () => {
+    // Primera práctica en curso que termina; luego el panel crea la segunda.
+    const finished = new Set<string>();
+    const games: string[] = ['g_p_11'];
+    const summary = (id: string) => ({ ...detail(id, finished.has(id)), board: undefined });
+    openPanel(
+      fakeArbiter({
+        teamGames: () => Promise.resolve([...games].reverse().map(summary)),
+        game: (id: string) => {
+          const next = detail(id, finished.has(id));
+          finished.add(id); // cada partida se ve en curso una vez y luego terminada
+          return Promise.resolve(next);
+        },
+        practice: () => {
+          games.push('g_p_12');
+          return Promise.resolve({ game_id: 'g_p_12' });
+        },
+      }),
+    );
+    await connect();
+    expect(await screen.findByRole('heading', { name: 'Partida g_p_11' })).toBeTruthy();
+    expect(
+      await screen.findAllByText('Ganamos por cuatro en línea', {}, { timeout: 4000 }),
+    ).toHaveLength(2);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Crear práctica' }));
+    expect(await screen.findByRole('heading', { name: 'Partida g_p_12' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Partida g_p_11' })).toBeNull();
+  });
 });
