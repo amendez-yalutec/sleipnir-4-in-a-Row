@@ -28,3 +28,6 @@ test-results/
 
 # Evidencias de las corridas E2E (capturas, videos y reportes): se comparten aparte
 evidencias/
+
+# Salida del build de Vercel (npm run build:vercel)
+.vercel
