@@ -5,8 +5,8 @@
  * empieza cuando el worker ya cargó y recibió el trabajo, no durante su arranque.
  */
 import { Worker } from 'node:worker_threads';
-import type { Position } from '@equipo6/engine';
-import type { Budget, Choice, MoveChooser } from './types.ts';
+import { type Position, legalMoves as legalColumns } from '@equipo6/engine';
+import type { Budget, Choice, Contempt, MoveChooser } from './types.ts';
 import type { SearchJob, WorkerMessage } from './worker-protocol.ts';
 
 export class BusyError extends Error {
@@ -31,6 +31,8 @@ interface Pending {
 }
 
 const WORKER_URL = new URL('./search-worker.ts', import.meta.url);
+/** Tope de una búsqueda en el turno del rival (normalmente la corta antes el turno siguiente). */
+export const PONDER_MS = 15_000;
 
 export class WorkerChooser implements MoveChooser {
   readonly #options: Required<WorkerChooserOptions>;
@@ -41,6 +43,9 @@ export class WorkerChooser implements MoveChooser {
   #timer: ReturnType<typeof setTimeout> | undefined;
   #nextId = 0;
   #closed = false;
+  /** Bandera compartida con el worker: 1 = cortar la búsqueda en el turno del rival. */
+  readonly #stop = new Int32Array(new SharedArrayBuffer(4));
+  #pondering = false;
 
   constructor(options: WorkerChooserOptions = {}) {
     this.#options = {
@@ -49,6 +54,33 @@ export class WorkerChooser implements MoveChooser {
       stallMarginMs: options.stallMarginMs ?? 500,
       fixedDepthStallMs: options.fixedDepthStallMs ?? 30_000,
     };
+  }
+
+  /** Hay una búsqueda en el turno del rival en curso. */
+  get pondering(): boolean {
+    return this.#pondering;
+  }
+
+  /**
+   * Piensa en el turno del rival: busca `position` (le toca al rival) para llenar la tabla de
+   * transposición. Solo si el worker está libre; el próximo `choose` la corta en menos de 1 ms.
+   */
+  ponder(position: Position, contempt?: Contempt): void {
+    if (this.#closed || this.#pondering || this.#running || this.#queue.length > 0) return;
+    const worker = this.#worker;
+    if (!worker) return;
+    this.#pondering = true;
+    Atomics.store(this.#stop, 0, 0);
+    const job: SearchJob = {
+      id: ++this.#nextId,
+      position: { board: position.board, toMove: position.toMove },
+      legalMoves: legalColumns(position.board),
+      softMs: PONDER_MS,
+      hardMs: PONDER_MS,
+      ponder: true,
+      ...(contempt && { contempt }),
+    };
+    worker.postMessage(job);
   }
 
   /** Búsquedas corriendo o en espera. */
@@ -74,8 +106,10 @@ export class WorkerChooser implements MoveChooser {
         softMs: budget.softMs,
         hardMs: budget.hardMs,
         ...(budget.maxDepth !== undefined && { maxDepth: budget.maxDepth }),
+        ...(budget.contempt && { contempt: budget.contempt }),
       };
       this.#queue.push({ job, resolve, reject });
+      if (this.#pondering) Atomics.store(this.#stop, 0, 1); // el trabajo arranca al llegar `pondered`
       void this.#pump();
     });
   }
@@ -92,12 +126,18 @@ export class WorkerChooser implements MoveChooser {
 
   #ensureWorker(): Promise<Worker> {
     if (this.#ready) return this.#ready;
-    const worker = new Worker(WORKER_URL, { workerData: { tableBits: this.#options.tableBits } });
+    const worker = new Worker(WORKER_URL, {
+      workerData: { tableBits: this.#options.tableBits, stop: this.#stop.buffer },
+    });
     this.#worker = worker;
     this.#ready = new Promise<Worker>((resolve, reject) => {
       worker.on('message', (message: WorkerMessage) => {
         if (message.type === 'ready') resolve(worker);
-        else if (this.#worker === worker && this.#running?.job.id === message.id) {
+        else if (message.type === 'pondered') {
+          if (this.#worker !== worker) return;
+          this.#pondering = false;
+          void this.#pump();
+        } else if (this.#worker === worker && this.#running?.job.id === message.id) {
           if (message.ok) this.#settle(null, message.choice);
           else this.#settle(new Error(message.error));
         }
@@ -117,7 +157,7 @@ export class WorkerChooser implements MoveChooser {
   }
 
   async #pump(): Promise<void> {
-    if (this.#running || this.#closed) return;
+    if (this.#running || this.#closed || this.#pondering) return;
     const next = this.#queue.shift();
     if (!next) return;
     this.#running = next;
@@ -156,6 +196,7 @@ export class WorkerChooser implements MoveChooser {
   #discard(worker: Worker, error: Error): void {
     if (this.#worker !== worker) return;
     this.#worker = null;
+    this.#pondering = false;
     this.#ready = null;
     void worker.terminate();
     this.#settle(error);

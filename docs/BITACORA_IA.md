@@ -502,3 +502,23 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
   de la IA: al principio propuso cambiar solo el `.env`. Arreglo: topes 0.6/0.72 (máximo 2,160 ms),
   apertura con 0.6 · soft y medio juego (jugadas 6–24) con soft = hard; valores por defecto 1800/2200.
   Medición en la laptop del torneo: peor búsqueda 1,867 ms.
+
+- **5 nov, 9:45 — pensar en el turno del rival.** La derrota contra Odd Times (`g_f7ea9774`) vino de la
+  jugada 18: una trampa a 29 jugadas que el motor vio con 4 s y no con 1.26 s. Se agregó búsqueda en el
+  turno del rival, que llena la tabla de transposición del worker y se corta al llegar el turno. Error de
+  la IA atrapado por las pruebas: si la bandera de corte ya estaba puesta al arrancar, el reloj devolvía
+  `Infinity` como hora de inicio y el plazo también era `Infinity`, así que la búsqueda no se cortaba.
+  Arreglo: la primera lectura del reloj siempre es real y, con la bandera puesta, no se busca.
+
+- **5 nov, 9:50 — libro contra la línea de Odd Times.** Odd Times nos ganó tres amistosos con la misma
+  línea (`g_f7ea9774` y sus espejos `g_5dc8ef68`, `g_e572f8e2`): el bot es determinista y repetía la
+  jugada 18 perdedora. Con 9 s por jugada, las columnas 1, 2 y 8 de esa posición son victoria
+  demostrada a 34 jugadas; ni con más tiempo ni pensando en el turno del rival el motor la encontraba
+  (llegaba a profundidad 25). Se agregó `apps/bot/src/chooser/book.ts` con esa posición y su espejo.
+  Verificado: tras la jugada del libro, el bot con 2,160 ms le gana a nuestro motor con 4.5 s.
+
+- **5 nov, 9:55 — preferir empatar a perder jugando segundo.** Pedido del equipo: jugando segundo,
+  mejor un empate que una derrota. El motor valía el empate como 0, casi igual que una línea dudosa de
+  −4. Se agregó `contempt` al motor (opción inyectada, sigue puro): jugando segundo, un empate vale +25
+  para nosotros (escala: victoria = 1,000; posiciones parejas entre −30 y +30). Una victoria demostrada
+  sigue valiendo más que cualquier empate. Aplica también al pensar en el turno del rival.

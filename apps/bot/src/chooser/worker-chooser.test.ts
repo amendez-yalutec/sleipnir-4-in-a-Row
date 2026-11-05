@@ -84,3 +84,43 @@ describe('búsqueda en un worker', () => {
     await expect(chooser.choose(at([]), ALL, FAST)).rejects.toThrow('cerrado');
   });
 });
+
+describe('pensar en el turno del rival', () => {
+  it('se corta al llegar el turno: la jugada sale dentro del presupuesto', async () => {
+    const chooser = make({ tableBits: 18 });
+    await chooser.warmUp();
+    chooser.ponder(at([3, 3]));
+    expect(chooser.pondering).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 300)); // el worker está ocupado pensando
+    const started = performance.now();
+    const choice = await chooser.choose(at([3, 3, 4]), ALL, { softMs: 200, hardMs: 300 });
+    const elapsed = performance.now() - started;
+    expect(ALL).toContain(choice.column);
+    expect(chooser.pondering).toBe(false);
+    // Sin el corte esperaría los 15 s del tope; con el corte apenas suma al presupuesto.
+    expect(elapsed).toBeLessThan(300 + 250);
+  });
+
+  it('no piensa si el worker no ha arrancado o está ocupado con un turno', async () => {
+    const cold = make();
+    cold.ponder(at([]));
+    expect(cold.pondering).toBe(false);
+
+    const busy = make();
+    await busy.warmUp();
+    const turn = busy.choose(at([]), ALL, FAST);
+    busy.ponder(at([3]));
+    expect(busy.pondering).toBe(false);
+    await turn;
+  });
+
+  it('después de pensar sigue respondiendo turnos seguidos', async () => {
+    const chooser = make();
+    await chooser.warmUp();
+    for (const moves of [[3], [3, 3, 4], [3, 3, 4, 4, 2]]) {
+      chooser.ponder(at(moves));
+      const choice = await chooser.choose(at([...moves, 0]), ALL, FAST);
+      expect(ALL).toContain(choice.column);
+    }
+  });
+});
