@@ -1,0 +1,10 @@
+{
+  "name": "@equipo6/secret-guard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hook pre-commit: bloquea archivos .env y el valor real de TEAM_TOKEN antes de que lleguen al repo.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

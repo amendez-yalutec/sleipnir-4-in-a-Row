@@ -1,0 +1,19 @@
+{
+  "name": "@equipo6/mock-arbiter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Árbitro simulado fiel al OpenAPI del torneo, con fallas inyectables, para desarrollar y probar sin el árbitro real.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@equipo6/engine": "0.1.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "fastify": "^5.12.8"
+  }
+}

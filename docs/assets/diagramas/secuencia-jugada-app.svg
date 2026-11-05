@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 520" width="980" height="520" role="img" aria-labelledby="app-titulo app-desc">
+  <title id="app-titulo">Secuencia de una jugada en la app web</title>
+  <desc id="app-desc">La persona elige una columna; la web pide a la API que valide la jugada con las reglas del motor y luego pide la jugada del bot, que calcula un worker. La web no implementa reglas.</desc>
+  <defs>
+    <marker id="app-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#212429"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: 'Outfit', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #212429; }
+    .fondo { fill: #f2f6fc; }
+    .actor { fill: #ffffff; stroke: #0076ff; stroke-width: 2; }
+    .vida { stroke: #8493ae; stroke-width: 1.5; stroke-dasharray: 3 5; }
+    .t { font-size: 16px; font-weight: 700; }
+    .m { font-size: 13.5px; }
+    .s { font-size: 13px; fill: #4d5b78; }
+    .ida { stroke: #212429; stroke-width: 1.6; marker-end: url(#app-flecha); }
+    .vuelta { stroke: #212429; stroke-width: 1.6; stroke-dasharray: 6 4; marker-end: url(#app-flecha); }
+    .nota { fill: #fff9f0; stroke: #e9bb1d; stroke-width: 1.5; }
+  </style>
+
+  <rect class="fondo" x="0" y="0" width="980" height="520" rx="16"/>
+
+  <rect class="actor" x="30" y="20" width="150" height="44" rx="12"/>
+  <text class="t" x="105" y="48" text-anchor="middle">Persona</text>
+  <rect class="actor" x="250" y="20" width="170" height="44" rx="12"/>
+  <text class="t" x="335" y="48" text-anchor="middle">Web (React)</text>
+  <rect class="actor" x="545" y="20" width="170" height="44" rx="12"/>
+  <text class="t" x="630" y="48" text-anchor="middle">API (Fastify)</text>
+  <rect class="actor" x="800" y="20" width="150" height="44" rx="12"/>
+  <text class="t" x="875" y="48" text-anchor="middle">Worker</text>
+
+  <line class="vida" x1="105" y1="64" x2="105" y2="450"/>
+  <line class="vida" x1="335" y1="64" x2="335" y2="450"/>
+  <line class="vida" x1="630" y1="64" x2="630" y2="450"/>
+  <line class="vida" x1="875" y1="64" x2="875" y2="450"/>
+
+  <text class="m" x="220" y="100" text-anchor="middle">clic en la columna 4</text>
+  <text class="s" x="220" y="117" text-anchor="middle">(o la tecla 4)</text>
+  <line class="ida" x1="107" y1="128" x2="331" y2="128"/>
+
+  <rect class="nota" x="120" y="140" width="200" height="30" rx="8"/>
+  <text class="s" x="132" y="160">coords.ts: 4 en pantalla → 3</text>
+
+  <text class="m" x="482" y="186" text-anchor="middle">POST /api/game/state</text>
+  <text class="s" x="482" y="203" text-anchor="middle">{ moves: [..., 3] }</text>
+  <line class="ida" x1="337" y1="214" x2="626" y2="214"/>
+
+  <text class="m" x="482" y="240" text-anchor="middle">200 GameState · 400 illegal_move</text>
+  <line class="vuelta" x1="628" y1="254" x2="339" y2="254"/>
+
+  <text class="m" x="482" y="288" text-anchor="middle">POST /api/game/bot-move</text>
+  <text class="s" x="482" y="305" text-anchor="middle">{ moves, level }</text>
+  <line class="ida" x1="337" y1="316" x2="626" y2="316"/>
+
+  <text class="m" x="752" y="300" text-anchor="middle">posición + nivel</text>
+  <line class="ida" x1="632" y1="316" x2="871" y2="316"/>
+  <text class="m" x="752" y="346" text-anchor="middle">columna, profundidad</text>
+  <line class="vuelta" x1="873" y1="358" x2="634" y2="358"/>
+
+  <text class="m" x="482" y="384" text-anchor="middle">200 GameState + bot · 429 busy</text>
+  <line class="vuelta" x1="628" y1="398" x2="339" y2="398"/>
+
+  <text class="m" x="220" y="420" text-anchor="middle">tablero, "Cómo pensó el bot"</text>
+  <line class="vuelta" x1="333" y1="432" x2="109" y2="432"/>
+
+  <text class="s" x="24" y="482">La web no implementa reglas: cada jugada la confirma la API con el motor (invariante 4); cada respuesta se valida con zod.</text>
+  <text class="s" x="24" y="502">Niveles: Fácil = profundidad 2 y 30 % al azar (sin perder de inmediato) · Medio = 150 ms · Difícil = el presupuesto del torneo.</text>
+</svg>

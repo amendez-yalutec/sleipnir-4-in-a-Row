@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 440" width="980" height="440" role="img" aria-labelledby="est-titulo est-desc">
+  <title id="est-titulo">Máquina de estados de la app web</title>
+  <desc id="est-desc">Fases del reducer de la web: setup, humanTurn, checking, botThinking, finished y error, con las acciones que pasan de una a otra.</desc>
+  <defs>
+    <marker id="est-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#212429"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: 'Outfit', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #212429; }
+    .fondo { fill: #f2f6fc; }
+    .estado { fill: #ffffff; stroke: #0076ff; stroke-width: 2; }
+    .fin { fill: #e9fdf1; stroke: #1f944f; stroke-width: 2; }
+    .falla { fill: #ffeaec; stroke: #bb1b33; stroke-width: 2; }
+    .t { font-size: 15px; font-weight: 700; }
+    .d { font-size: 12px; fill: #4d5b78; }
+    .a { font-size: 12.5px; fill: #1155cc; font-weight: 600; }
+    .s { font-size: 13px; fill: #4d5b78; }
+    .f { stroke: #212429; stroke-width: 1.6; fill: none; marker-end: url(#est-flecha); }
+    .f2 { stroke: #8493ae; stroke-width: 1.6; fill: none; stroke-dasharray: 6 4; marker-end: url(#est-flecha); }
+  </style>
+
+  <rect class="fondo" x="0" y="0" width="980" height="440" rx="16"/>
+
+  <!-- Estados -->
+  <rect class="estado" x="30" y="166" width="150" height="52" rx="12"/>
+  <text class="t" x="105" y="189" text-anchor="middle">setup</text>
+  <text class="d" x="105" y="207" text-anchor="middle">nueva partida</text>
+
+  <rect class="estado" x="270" y="96" width="160" height="52" rx="12"/>
+  <text class="t" x="350" y="119" text-anchor="middle">humanTurn</text>
+  <text class="d" x="350" y="137" text-anchor="middle">tu turno</text>
+
+  <rect class="estado" x="540" y="96" width="160" height="52" rx="12"/>
+  <text class="t" x="620" y="119" text-anchor="middle">checking</text>
+  <text class="d" x="620" y="137" text-anchor="middle">la API valida tu jugada</text>
+
+  <rect class="estado" x="405" y="256" width="160" height="52" rx="12"/>
+  <text class="t" x="485" y="279" text-anchor="middle">botThinking</text>
+  <text class="d" x="485" y="297" text-anchor="middle">el bot piensa</text>
+
+  <rect class="fin" x="800" y="96" width="150" height="52" rx="12"/>
+  <text class="t" x="875" y="119" text-anchor="middle">finished</text>
+  <text class="d" x="875" y="137" text-anchor="middle">ganó, perdió o empate</text>
+
+  <rect class="falla" x="800" y="256" width="150" height="52" rx="12"/>
+  <text class="t" x="875" y="279" text-anchor="middle">error</text>
+  <text class="d" x="875" y="297" text-anchor="middle">sin red o servidor</text>
+
+  <!-- setup → humanTurn / botThinking -->
+  <path class="f" d="M180,180 L268,134"/>
+  <text class="a" x="84" y="132">start (empiezo yo)</text>
+  <path class="f" d="M180,206 L403,276"/>
+  <text class="a" x="190" y="262">start (empieza el bot)</text>
+
+  <!-- humanTurn → checking -->
+  <path class="f" d="M430,122 L538,122"/>
+  <text class="a" x="438" y="114">columnClicked</text>
+
+  <!-- checking → humanTurn (rechazada) -->
+  <path class="f" d="M580,96 C560,52 410,52 390,94"/>
+  <text class="a" x="420" y="58">humanRejected (400)</text>
+
+  <!-- checking → botThinking -->
+  <path class="f" d="M600,148 L520,254"/>
+  <text class="a" x="566" y="208">humanConfirmed</text>
+
+  <!-- botThinking → humanTurn -->
+  <path class="f" d="M450,256 L370,150"/>
+  <text class="a" x="330" y="208">botMoved</text>
+
+  <!-- undo (bucle) -->
+  <path class="f" d="M290,96 C270,52 230,70 270,104"/>
+  <text class="a" x="206" y="60">undo</text>
+
+  <!-- → finished -->
+  <path class="f" d="M700,122 L798,122"/>
+  <path class="f" d="M565,268 C680,230 760,170 810,150"/>
+  <text class="a" x="706" y="114">fin de partida</text>
+
+  <!-- → error y retry -->
+  <path class="f" d="M565,282 L798,282"/>
+  <text class="a" x="650" y="274">failed</text>
+  <path class="f" d="M680,148 C720,190 770,230 810,256"/>
+  <path class="f2" d="M860,308 C820,370 560,370 510,310"/>
+  <text class="a" x="610" y="370">retry: vuelve a la fase que falló</text>
+
+  <!-- finished → setup -->
+  <path class="f2" d="M875,96 L875,28 L105,28 L105,164"/>
+  <text class="a" x="430" y="22">playAgain · reset (desde cualquier fase)</text>
+
+  <text class="s" x="24" y="414">El reducer es puro (100 % de cobertura); useGame dispara las llamadas a la API según la fase. ?moves=3,4,3 carga una posición (acción loaded).</text>
+</svg>

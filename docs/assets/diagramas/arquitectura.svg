@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" width="980" height="560" role="img" aria-labelledby="arq-titulo arq-desc">
+  <title id="arq-titulo">Arquitectura de Sleipnir</title>
+  <desc id="arq-desc">La app web habla con la API de la app; la API y el ciclo del torneo viven en un mismo proceso de Node y cada uno usa su propio worker con el motor. El ciclo juega contra el árbitro con el token; la API lee las partidas públicas sin token. El árbitro simulado reemplaza al real en desarrollo y pruebas.</desc>
+  <defs>
+    <marker id="arq-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#212429"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: 'Outfit', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #212429; }
+    .fondo { fill: #f2f6fc; }
+    .caja { fill: #ffffff; stroke: #a4afc3; stroke-width: 1.5; }
+    .clave { fill: #ffffff; stroke: #0076ff; stroke-width: 2; }
+    .grupo { fill: none; stroke: #8493ae; stroke-width: 1.5; stroke-dasharray: 7 5; }
+    .t { font-size: 16px; font-weight: 700; }
+    .s { font-size: 13px; fill: #4d5b78; }
+    .g { font-size: 13px; font-weight: 700; fill: #1155cc; letter-spacing: .04em; }
+    .lbl { font-size: 12.5px; fill: #1155cc; font-weight: 600; }
+    .flecha { stroke: #212429; stroke-width: 1.6; fill: none; marker-end: url(#arq-flecha); }
+    .punteada { stroke-dasharray: 6 4; }
+  </style>
+
+  <rect class="fondo" x="0" y="0" width="980" height="560" rx="16"/>
+
+  <!-- Navegador -->
+  <rect class="caja" x="24" y="92" width="210" height="150" rx="14"/>
+  <text class="t" x="40" y="120">Navegador</text>
+  <text class="s" x="40" y="142">apps/web · React 19 + Vite</text>
+  <text class="s" x="40" y="166">Board · SetupPanel</text>
+  <text class="s" x="40" y="186">GameStatus · BotInsights</text>
+  <text class="s" x="40" y="210">useGame (reducer)</text>
+  <text class="s" x="40" y="230">useBotStatus (latido 15 s)</text>
+
+  <!-- Proceso del bot -->
+  <rect class="grupo" x="282" y="40" width="404" height="420" rx="18"/>
+  <text class="g" x="300" y="66">apps/bot · UN PROCESO DE NODE</text>
+
+  <rect class="clave" x="304" y="86" width="360" height="118" rx="14"/>
+  <text class="t" x="320" y="113">API de la app (Fastify)</text>
+  <text class="s" x="320" y="136">/api/game/state · /api/game/bot-move</text>
+  <text class="s" x="320" y="156">/api/health · /api/tournament/games</text>
+  <text class="s" x="320" y="184">helmet (CSP) · rate limit · zod · 4 KB</text>
+
+  <rect class="clave" x="304" y="300" width="360" height="96" rx="14"/>
+  <text class="t" x="320" y="327">Ciclo del torneo (loop.ts)</text>
+  <text class="s" x="320" y="350">long polling · guardColumn · respaldo</text>
+  <text class="s" x="320" y="370">pausas ante errores (1–5 s · 5–60 s)</text>
+
+  <rect class="caja" x="304" y="226" width="170" height="56" rx="12"/>
+  <text class="t" x="318" y="250" style="font-size:14px">Worker de la app</text>
+  <text class="s" x="318" y="270">tabla 2¹⁸ · cola 3</text>
+
+  <rect class="caja" x="494" y="226" width="170" height="56" rx="12"/>
+  <text class="t" x="508" y="250" style="font-size:14px">Worker del torneo</text>
+  <text class="s" x="508" y="270">tabla 2²⁰ · exclusivo</text>
+
+  <text class="s" x="304" y="424">Cada worker corre packages/engine:</text>
+  <text class="s" x="304" y="444">bitboard + alfa-beta + tabla de transposición</text>
+
+  <!-- Árbitro -->
+  <rect class="clave" x="746" y="92" width="210" height="150" rx="14"/>
+  <text class="t" x="762" y="120">Árbitro (Yompi)</text>
+  <text class="s" x="762" y="144">Público, sin token:</text>
+  <text class="s" x="762" y="164">GET /api/games</text>
+  <text class="s" x="762" y="190">Con token:</text>
+  <text class="s" x="762" y="210">GET /api/next</text>
+  <text class="s" x="762" y="230">POST /api/move</text>
+
+  <rect class="caja punteada" x="746" y="300" width="210" height="96" rx="14" style="stroke-dasharray:6 4"/>
+  <text class="t" x="762" y="327">tools/mock-arbiter</text>
+  <text class="s" x="762" y="350">mismo OpenAPI 1.0.1;</text>
+  <text class="s" x="762" y="370">reemplaza al árbitro en</text>
+  <text class="s" x="762" y="388">desarrollo y pruebas</text>
+
+  <!-- Contratos -->
+  <rect class="caja" x="24" y="300" width="210" height="96" rx="14"/>
+  <text class="t" x="40" y="327">packages/contracts</text>
+  <text class="s" x="40" y="350">esquemas zod que comparten</text>
+  <text class="s" x="40" y="370">la web y la API</text>
+
+  <!-- Flechas -->
+  <path class="flecha" d="M234,145 L302,145"/>
+  <text class="lbl" x="240" y="135">JSON</text>
+
+  <path class="flecha" d="M389,204 L389,224"/>
+  <path class="flecha" d="M579,298 L579,284"/>
+
+  <path class="flecha" d="M664,348 L712,348 L712,212 L744,212"/>
+  <text class="lbl" x="720" y="300">token</text>
+
+  <path class="flecha punteada" d="M664,156 L744,156"/>
+  <text class="lbl" x="674" y="146">sin token</text>
+
+  <path class="punteada" d="M851,298 L851,244" stroke="#8493ae" stroke-width="1.5" fill="none"/>
+
+  <path class="punteada" d="M129,298 L129,244" stroke="#8493ae" stroke-width="1.5" fill="none"/>
+  <path class="punteada" d="M234,348 C262,348 262,190 302,190" stroke="#8493ae" stroke-width="1.5" fill="none"/>
+
+  <!-- Pie -->
+  <text class="s" x="24" y="500">Invariantes: el motor es puro (sin red, disco ni reloj global) · nunca se envía una columna fuera de legal_moves ·</text>
+  <text class="s" x="24" y="522">el JSON del árbitro solo se interpreta en apps/bot/src/arbiter/schema.ts · el token nunca sale del ciclo del torneo.</text>
+</svg>
