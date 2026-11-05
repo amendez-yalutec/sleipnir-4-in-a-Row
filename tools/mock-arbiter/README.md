@@ -11,6 +11,10 @@ npm run mock
 Escucha en `http://127.0.0.1:8787` con dos equipos de juguete: `eq6` (token `token-local-eq6`) y `rival`
 (token `token-local-rival`). Son tokens locales y no sirven en el árbitro real.
 
+Responde CORS solo a páginas de esta computadora (`http://localhost:*` y `http://127.0.0.1:*`), para
+que el panel **Mi equipo** de la web (`npm run bot` en `:8080` o `npm run dev` en `:5173`) funcione
+contra el mock igual que contra el árbitro de prueba.
+
 ## Partida con curl
 
 ```bash

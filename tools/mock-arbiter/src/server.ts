@@ -1,6 +1,7 @@
 /** Servidor HTTP del árbitro simulado (Fastify). Las pruebas usan `app.inject()` sin abrir puertos. */
 import Fastify from 'fastify';
 import { type ArbiterOptions, MockArbiter } from './arbiter.ts';
+import { installLocalCors } from './cors.ts';
 import { type FaultOptions, installFaults } from './faults.ts';
 import type { GameKind, Seat } from './game.ts';
 import { isHouseBot } from './house-bots.ts';
@@ -25,6 +26,8 @@ export function buildMockServer(options: MockServerOptions) {
     forceCloseConnections: true,
   });
 
+  // Antes que las fallas: un preflight del navegador no debe recibir un 503 inyectado.
+  installLocalCors(app);
   installFaults(app, options.faults ?? {}, createRandom((options.seed ?? 6) + 1));
 
   // JSON inválido, cuerpo demasiado grande o content-type raro: mismo formato de error del OpenAPI.
