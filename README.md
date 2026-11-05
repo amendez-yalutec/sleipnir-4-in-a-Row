@@ -357,6 +357,30 @@ limit vive en la memoria de cada instancia. Variables opcionales: `THINK_SOFT_MS
 `RATE_LIMIT_PER_MIN`, `BOT_MOVE_PER_MIN` y, para repetir partidas del torneo, `ARBITRO_URL` y `TEAM_ID`
 (nunca `TEAM_TOKEN`).
 
+### Bot del torneo en Vercel (opcional)
+
+El bot del torneo también puede correr en Vercel en lugar de la laptop. Vercel no mantiene procesos
+vivos, así que un **cron de cada minuto** despierta la función `/api/cron/torneo`
+([`apps/bot/src/vercel/tournament.ts`](apps/bot/src/vercel/tournament.ts)), que corre el mismo ciclo del bot
+(`runArbiterLoop`) durante ~50 s. El ciclo solo se corta entre turnos: un turno recibido siempre se juega.
+Entre ventanas quedan ~7-10 s sin preguntar; un turno que aparece ahí espera a la siguiente ventana, lejos
+de los 30 s de ausencia. El reloj de 3 s empieza cuando el bot recoge el turno, así que esa espera no lo
+consume. Si el cron de Vercel se atrasa mucho, ese margen se achica: para la liga, la laptop sigue siendo
+la opción más segura.
+
+Para activarlo, en Vercel → Settings → Environment Variables (Production) y luego un redeploy:
+
+| Variable | Valor |
+|---|---|
+| `ARBITRO_ENABLED` | `true` (sin esto el cron no juega) |
+| `ARBITRO_URL` | URL del árbitro |
+| `TEAM_TOKEN` | token del equipo, marcado como **Sensitive** |
+| `CRON_SECRET` | un texto largo al azar; Vercel lo manda en cada llamada del cron y la función rechaza las demás |
+
+**Un solo bot por token** (invariante 7): si el bot corre en Vercel, la laptop va con
+`ARBITRO_ENABLED=false`, y al revés. Para apagarlo en Vercel basta con poner `ARBITRO_ENABLED=false`.
+El plan Pro permite el cron de cada minuto; los logs de cada ventana se ven en Vercel → Logs.
+
 ## Variables de entorno
 
 Copia `.env.example` a `.env` (git lo ignora y la guardia de secretos bloquea subirlo). La configuración

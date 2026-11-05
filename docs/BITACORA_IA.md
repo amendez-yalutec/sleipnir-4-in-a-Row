@@ -419,3 +419,17 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
 - **Cómo lo verificamos:** 17 pruebas nuevas (configuración, cliente y pantalla con un árbitro falso) y una
   corrida real con Playwright y Chrome contra el árbitro de prueba en Vercel: muestra posición y turnos,
   crea la práctica, lista las partidas, 0 errores de consola y el token solo en `sessionStorage`.
+
+### 2026-11-05 — Bot del torneo en Vercel con un cron
+
+- **Quién / herramienta:** Alberto Mendez / Claude Code.
+- **Pedido:** poder correr el bot del torneo en Vercel, no solo en la laptop.
+- **Decisión clave:** Vercel no mantiene procesos vivos, así que un cron de cada minuto corre el ciclo
+  por ventanas de ~50 s (primero 45 s; se subió a 50 s para dejar más margen ante retrasos del cron). El riesgo detectado antes de escribir código: si la función se apaga a mitad de
+  un `/api/next` que entrega un turno, ese turno queda servido sin jugar y se pierde por tiempo. Por eso
+  `runArbiterLoop` recibió la opción `until`: acorta el long polling para que la última espera termine
+  antes del corte y siempre juega el turno recibido.
+- **Cómo lo verificamos:** pruebas de `until` con reloj falso (acorta la espera, juega el último turno, no
+  pregunta si ya pasó la hora), pruebas del handler (sin secreto → 401, desactivado no juega) y la función
+  empaquetada corrida sola contra el árbitro de prueba: ventana de 44 s (con 45 s de límite), partida ganada a casa-basico en
+  9 jugadas, 0 problemas.
