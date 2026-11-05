@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 560" width="980" height="560" role="img" aria-labelledby="turno-titulo turno-desc">
+  <title id="turno-titulo">Secuencia de un turno del torneo</title>
+  <desc id="turno-desc">El ciclo pide turno al árbitro con long polling y su token, arranca el reloj al recibirlo, el worker busca la jugada dentro del presupuesto, el ciclo comprueba que la columna esté en legal_moves y la envía; ante errores siempre hay pausa.</desc>
+  <defs>
+    <marker id="turno-flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#212429"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: 'Outfit', 'Segoe UI', Helvetica, Arial, sans-serif; fill: #212429; }
+    .fondo { fill: #f2f6fc; }
+    .actor { fill: #ffffff; stroke: #0076ff; stroke-width: 2; }
+    .vida { stroke: #8493ae; stroke-width: 1.5; stroke-dasharray: 3 5; }
+    .t { font-size: 16px; font-weight: 700; }
+    .m { font-size: 13.5px; }
+    .s { font-size: 13px; fill: #4d5b78; }
+    .ida { stroke: #212429; stroke-width: 1.6; marker-end: url(#turno-flecha); }
+    .vuelta { stroke: #212429; stroke-width: 1.6; stroke-dasharray: 6 4; marker-end: url(#turno-flecha); }
+    .nota { fill: #fff9f0; stroke: #e9bb1d; stroke-width: 1.5; }
+    .num { font-size: 12px; font-weight: 700; fill: #ffffff; }
+    .bola { fill: #1155cc; }
+  </style>
+
+  <rect class="fondo" x="0" y="0" width="980" height="560" rx="16"/>
+
+  <!-- Participantes -->
+  <rect class="actor" x="70" y="20" width="180" height="44" rx="12"/>
+  <text class="t" x="160" y="48" text-anchor="middle">Árbitro</text>
+  <rect class="actor" x="390" y="20" width="200" height="44" rx="12"/>
+  <text class="t" x="490" y="48" text-anchor="middle">Ciclo del torneo</text>
+  <rect class="actor" x="730" y="20" width="180" height="44" rx="12"/>
+  <text class="t" x="820" y="48" text-anchor="middle">Worker + motor</text>
+
+  <line class="vida" x1="160" y1="64" x2="160" y2="490"/>
+  <line class="vida" x1="490" y1="64" x2="490" y2="490"/>
+  <line class="vida" x1="820" y1="64" x2="820" y2="490"/>
+
+  <!-- 1 -->
+  <circle class="bola" cx="505" cy="96" r="9"/><text class="num" x="505" y="100" text-anchor="middle">1</text>
+  <text class="m" x="325" y="100" text-anchor="middle">GET /api/next?wait=20 (con token)</text>
+  <line class="ida" x1="488" y1="112" x2="164" y2="112"/>
+
+  <!-- 2 -->
+  <circle class="bola" cx="145" cy="146" r="9"/><text class="num" x="145" y="150" text-anchor="middle">2</text>
+  <text class="m" x="325" y="140" text-anchor="middle">200 turno: game_id, board, you,</text>
+  <text class="m" x="325" y="158" text-anchor="middle">legal_moves, deadline_ms</text>
+  <line class="vuelta" x1="162" y1="172" x2="486" y2="172"/>
+
+  <!-- 3: nota reloj -->
+  <rect class="nota" x="500" y="186" width="300" height="30" rx="8"/>
+  <text class="s" x="512" y="206">3 · El reloj arranca al recibir el turno</text>
+
+  <!-- 4 -->
+  <circle class="bola" cx="505" cy="236" r="9"/><text class="num" x="505" y="240" text-anchor="middle">4</text>
+  <text class="m" x="655" y="240" text-anchor="middle">posición + presupuesto 1.4 s / 1.8 s</text>
+  <line class="ida" x1="492" y1="254" x2="816" y2="254"/>
+
+  <!-- 5 -->
+  <circle class="bola" cx="835" cy="282" r="9"/><text class="num" x="835" y="286" text-anchor="middle">5</text>
+  <text class="m" x="655" y="286" text-anchor="middle">columna · profundidad 17–25</text>
+  <line class="vuelta" x1="818" y1="300" x2="494" y2="300"/>
+
+  <!-- 6: nota guardia -->
+  <rect class="nota" x="500" y="314" width="400" height="50" rx="8"/>
+  <text class="s" x="512" y="334">6 · guardColumn: si no está en legal_moves, la más central.</text>
+  <text class="s" x="512" y="353">Sin respuesta en 1.8 s + 100 ms: jugada de respaldo.</text>
+
+  <!-- 7 -->
+  <circle class="bola" cx="505" cy="384" r="9"/><text class="num" x="505" y="388" text-anchor="middle">7</text>
+  <text class="m" x="325" y="388" text-anchor="middle">POST /api/move { game_id, column }</text>
+  <line class="ida" x1="488" y1="402" x2="164" y2="402"/>
+
+  <!-- 8 -->
+  <circle class="bola" cx="145" cy="432" r="9"/><text class="num" x="145" y="436" text-anchor="middle">8</text>
+  <text class="m" x="325" y="436" text-anchor="middle">200 aceptada · 409 ya no hay turno</text>
+  <line class="vuelta" x1="162" y1="452" x2="486" y2="452"/>
+  <text class="s" x="500" y="456">y vuelve al paso 1</text>
+
+  <!-- Pie -->
+  <text class="s" x="24" y="516">Nunca un ciclo sin pausa: error de red → 1, 2, 4, 5 s · token rechazado (401) → 5 a 60 s. El presupuesto se recorta</text>
+  <text class="s" x="24" y="536">al 60 % de deadline_ms si el árbitro da menos tiempo. El token solo viaja en la cabecera Authorization.</text>
+</svg>
