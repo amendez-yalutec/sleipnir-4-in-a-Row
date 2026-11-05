@@ -415,7 +415,7 @@ repetir su valor.
 | `TEAM_TOKEN` | — | **solo máquina A**, opcional | token del equipo si el bot arranca desde `.env`; si no, se escribe en **Mi equipo**. Nunca en el repo, los logs ni las capturas |
 | `ARBITRO_ENABLED` | `false` | máquina A, opcional | con `true`, el ciclo del torneo arranca solo al iniciar el servidor; si no, se inicia desde la web (**Mi equipo**) |
 | `PORT` / `HOST` | `8080` / `127.0.0.1` | todas | API de la app; `HOST=0.0.0.0` solo en la máquina de demo |
-| `THINK_SOFT_MS` / `THINK_HARD_MS` | `1400` / `1800` | todas | presupuesto de búsqueda por jugada |
+| `THINK_SOFT_MS` / `THINK_HARD_MS` | `1800` / `2200` | todas | presupuesto de búsqueda por jugada; en el torneo se reparte por fase (apertura 0.6 · soft, medio juego hasta hard, tope 2,160 ms) |
 | `LONGPOLL_WAIT_S` | `20` | máquina A | espera del long polling del árbitro |
 | `LOG_DIR` | `./logs` | todas | carpeta de los logs JSONL; se usará en B8 (hoy los logs salen por la consola) |
 | `TEAM_ID` | — | máquina A y demo | id público del equipo en el árbitro (p. ej. `eq6`): la app muestra solo nuestras partidas |
