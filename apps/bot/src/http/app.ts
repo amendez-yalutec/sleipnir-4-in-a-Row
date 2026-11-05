@@ -7,8 +7,10 @@ import { existsSync } from 'node:fs';
 import fastifyStatic from '@fastify/static';
 import { type Health, healthSchema } from '@equipo6/contracts';
 import Fastify, { type FastifyInstance } from 'fastify';
+import type { TournamentController } from '../arbiter/controller.ts';
 import type { MoveChooser } from '../chooser/types.ts';
 import type { Logger } from '../log.ts';
+import { registerControlRoutes } from './control-routes.ts';
 import { registerGameRoutes } from './game-routes.ts';
 import { DEFAULT_RATE_LIMIT, type RateLimitOptions, registerSecurity } from './security.ts';
 import { type TournamentDeps, registerTournamentRoutes } from './tournament-routes.ts';
@@ -22,6 +24,8 @@ export interface AppServerOptions {
   readonly think: { readonly softMs: number; readonly hardMs: number };
   readonly arbiterStatus: () => Health['arbiter'];
   readonly tournament?: TournamentDeps;
+  /** Iniciar y detener el bot del torneo desde la web; solo en el servidor de la laptop. */
+  readonly control?: TournamentController;
   /** Carpeta del build del frontend; si no existe, solo se sirve la API. */
   readonly webDir?: string;
   readonly rateLimit?: RateLimitOptions;
@@ -47,6 +51,7 @@ export async function buildAppServer(options: AppServerOptions): Promise<Fastify
     limits.botMoveMax,
   );
   registerTournamentRoutes(app, options.tournament, options.log);
+  if (options.control) registerControlRoutes(app, options.control);
 
   if (options.webDir && existsSync(options.webDir)) {
     // `send` normaliza la ruta y no sale de `root` (path traversal, pentest #7).

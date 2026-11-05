@@ -419,3 +419,45 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
 - **Cómo lo verificamos:** 17 pruebas nuevas (configuración, cliente y pantalla con un árbitro falso) y una
   corrida real con Playwright y Chrome contra el árbitro de prueba en Vercel: muestra posición y turnos,
   crea la práctica, lista las partidas, 0 errores de consola y el token solo en `sessionStorage`.
+
+### 2026-11-05 — Iniciar y detener la escucha del bot desde la web
+
+- **Quién / herramienta:** Alberto Mendez / Claude Code.
+- **Pedido:** dejar el bot del torneo solo en la laptop, pero iniciarlo y detenerlo desde la web en vez
+  de con `ARBITRO_ENABLED=true` al arrancar. Se descartó correrlo en Vercel con un cron (rama
+  `feature/bot-en-vercel`, sin integrar).
+- **Qué devolvió:** un `TournamentController` que corre un solo ciclo a la vez; rutas `/api/control`
+  (estado, iniciar y detener) protegidas por loopback y mismo origen; y la tarjeta "Bot del torneo" en
+  "Mi equipo", que usa la URL y el token del formulario.
+- **Qué salió mal y cómo se detectó:** en la prueba con navegador la tarjeta decía "Conectándose…"
+  hasta 20 s después de iniciar, porque el estado `starting` dura hasta que responde el primer long
+  polling. Para la persona el bot ya está escuchando; ahora lo dice así.
+- **Cómo lo verificamos:** pruebas del controlador, de las rutas (403 desde otra IP o desde otro origen,
+  409 si ya escucha, 404 sin controlador) y de la tarjeta; y una corrida real con Chrome: iniciar desde la
+  web, práctica `g_p_07` ganada a casa-basico en 9 jugadas, detener desde la web, 0 errores de consola.
+
+### 2026-11-05 — Tablero en vivo de las partidas del equipo
+
+- **Quién / herramienta:** Alberto Mendez / Claude Code.
+- **Pedido:** ver el tablero de la partida que juega el bot desde "Mi equipo".
+- **Qué devolvió:** `GameViewer`, que pide la partida al árbitro cada 1.5 s y la dibuja con el mismo
+  `Board` de la app en modo solo lectura; la partida en curso se abre sola y las demás con un clic.
+- **Qué se corrigió al probar:** la lista y los turnos pendientes no se actualizaban al terminar la
+  partida, y una partida abierta automáticamente habría desaparecido justo al terminar (ya no estaba
+  "en curso"). Ahora el visor avisa al panel, que se refresca y deja el tablero abierto con el resultado.
+- **Cómo lo verificamos:** pruebas del visor con un árbitro falso (se abre solo, se abre con clic, se
+  cierra, se queda al terminar y refresca la lista) y una corrida real con Chrome contra el árbitro de
+  prueba: tablero en vivo a mitad de partida, victoria a casa-basico en 7 jugadas, 0 errores de consola.
+
+### 2026-11-05 — Se retira el despliegue en Vercel
+
+- **Quién / herramienta:** Alberto Mendez / Claude Code.
+- **Decisión:** todo queda en la laptop. Se quitan la función de la API para Vercel
+  (`apps/bot/src/vercel/`), `scripts/vercel-build.ts`, `vercel.json`, el script `build:vercel` y la
+  dependencia `rolldown`. La rama `feature/bot-en-vercel` (el bot por cron) no se integró.
+- **Por qué:** Vercel no mantiene procesos vivos. El bot del torneo necesita long polling continuo y en
+  Vercel solo se podía por ventanas de un cron, con huecos y riesgo de perder por ausencia; la app web
+  necesitaba una segunda copia de la API. El detalle está en `docs/TECNICO.md` § 9.
+- **Qué se conserva:** el panel "Mi equipo" (habla con el árbitro desde el navegador) y el control de la
+  escucha desde la web, que funcionan en la laptop.
+

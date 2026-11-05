@@ -121,8 +121,9 @@ _pendiente_).
 | B8: workers + logs a archivo | los workers se adelantaron con B9; los logs JSONL a archivo siguen pendientes | la API de la app no podía correr búsquedas en el hilo del torneo |
 | §7: niveles "Fácil / Medio / Difícil" | en el contrato se llaman `easy` / `medium` / `hard` | identificadores en inglés (`AGENTS.md`); la web muestra los nombres en español |
 | §7: `GET /api/tournament/games` "desde los logs" | se arma con la ruta pública `GET /api/games` del árbitro (OpenAPI 1.0.1), filtrada por `TEAM_ID` | funciona también en la máquina de demo, que no tiene token ni logs del torneo |
+| §8: el token solo en el `.env` de la máquina A y el ciclo arranca con `ARBITRO_ENABLED=true` | el ciclo también se inicia y detiene desde la web (`TournamentController`, rutas `/api/control`); la URL y el token se pasan desde el panel "Mi equipo" y viven solo en la memoria del servidor | manejar el bot sin editar archivos ni reiniciar. Las rutas solo aceptan loopback y el mismo origen |
 | Invariante 2 (JSON del árbitro solo en `apps/bot/src/arbiter/schema.ts`) | el panel "Mi equipo" consulta el árbitro desde el navegador; su JSON se interpreta solo en `apps/web/src/arbiter/schema.ts` | el equipo quería ver posición, crear prácticas y registrar la entrega desde la web con su token, sin pasar el token por nuestra API. La CSP abre `connect-src` a `https:` y al árbitro simulado local |
-| §7: la app se juega en la misma computadora o en la red local | además se puede desplegar en Vercel: la web como estáticos y la API de la app como una función que reutiliza `buildAppServer` (`apps/bot/src/vercel/handler.ts`, `scripts/vercel-build.ts`) | jugarla en línea sin la laptop prendida. En la función la búsqueda corre en su hilo (no hay workers), el rate limit es por instancia y no hay ciclo contra el árbitro |
+| §7: la app se juega en la misma computadora o en la red local | se mantiene así: todo corre en la laptop (`npm run bot` sirve la web, la API y el bot del torneo). Se probó desplegar la app y el bot en Vercel y se retiró | Vercel ejecuta funciones que se apagan, no procesos que corren siempre. El bot del torneo necesita un long polling continuo para recoger cada turno antes de 30 s; en Vercel solo se lograba con un cron por ventanas, con huecos entre ventanas y riesgo de perder por ausencia si el cron se atrasaba. La app web sola tampoco juega (pide todo a la API, invariante 4), así que habría que mantener una segunda copia de la API como función. Ver § 9 |
 
 ## 6. API de la app
 
@@ -204,3 +205,19 @@ puntos 3/1/0 y estos desempates: puntos, enfrentamiento directo, diferencia V−
 
 Arena y H1 (B7), logs JSONL a archivo (B8), endurecimiento (B10: supervisor, `smoke`, `submit`,
 `build`), afinación (B11) y conexión real del jueves (B12). Ver `PLAN_BACKEND.md` §10.
+
+## 9. Despliegue: todo en la laptop (por qué no Vercel)
+
+Todo corre en la laptop del equipo con `npm run bot`: un solo proceso de Node sirve la app web, la API de la
+app y el bot del torneo, que se inicia y detiene desde **Mi equipo**. Se probó desplegar en Vercel y se
+retiró por estas limitaciones:
+
+| Pieza | Qué necesita | Por qué Vercel no encaja |
+|---|---|---|
+| Bot del torneo | un ciclo que nunca se detiene: long polling a `/api/next` y respuesta en 3 s | Vercel ejecuta funciones que despiertan, responden y se apagan. Solo se podía con un cron cada minuto que corriera el ciclo por ventanas de ~50 s: quedaban huecos de ~7-10 s sin preguntar y, si el cron se atrasaba, un turno podía pasar los 30 s y perderse por ausencia. Además el token tendría que vivir en Vercel, fuera de la máquina A |
+| App web | la API de la app (`/api/game/*`): la web no tiene reglas ni bot (invariante 4) | habría que mantener una segunda copia de la API como función, con la búsqueda sin workers y un rate limit que no es global |
+
+Las bases solo piden que la app funcione "en la misma computadora o en la red local", así que Vercel era un
+extra y no compensaba el riesgo para la liga (25 puntos). El árbitro de prueba que usamos para practicar sí
+está en Vercel, pero es otro proyecto: no forma parte de esta entrega.
+

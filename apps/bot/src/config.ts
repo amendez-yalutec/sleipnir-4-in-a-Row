@@ -17,7 +17,9 @@ const int = (min: number, max: number, fallback: number) =>
 
 const envSchema = z
   .object({
-    ARBITRO_ENABLED: flag.default('true').transform((value) => value === 'true'),
+    // Por defecto el servidor arranca en espera: la escucha se inicia desde la web ("Mi equipo").
+    // Con `true`, el bot arranca solo con ARBITRO_URL y TEAM_TOKEN del .env.
+    ARBITRO_ENABLED: flag.default('false').transform((value) => value === 'true'),
     ARBITRO_URL: z.url({ error: 'debe ser una URL' }).optional(),
     TEAM_TOKEN: z.string().regex(/^\S+$/, { error: 'no puede tener espacios' }).optional(),
     LONGPOLL_WAIT_S: int(1, 25, 20),

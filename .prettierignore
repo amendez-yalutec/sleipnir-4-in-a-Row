@@ -1,6 +1,5 @@
 node_modules/
 dist/
-.vercel/
 coverage/
 package-lock.json
 

@@ -15,7 +15,6 @@ export default defineConfig([
   globalIgnores([
     '**/node_modules/',
     '**/dist/',
-    '.vercel/',
     '**/coverage/',
     'spec/',
     'evidencias/',
