@@ -258,6 +258,28 @@ propio origen:
 - **Desarrollo:** Vite redirige `/api` a `http://127.0.0.1:8080` ([`vite.config.ts`](apps/web/vite.config.ts)).
 - **Producción y demo:** el mismo servidor de la API sirve el build.
 
+La conexión al árbitro del panel **Mi equipo** no es una variable de entorno: cada quien la escribe en la
+web (ver abajo).
+
+### Panel "Mi equipo"
+
+La pestaña **Mi equipo** (`#equipo`) tiene un formulario con la **URL del árbitro**, el **team ID** y el
+**token del equipo**. Con eso el navegador consulta el árbitro directamente
+([`apps/web/src/arbiter/`](apps/web/src/arbiter/)):
+
+- posición, puntos, turnos pendientes y entrega registrada (`GET /api/me`);
+- crear una práctica contra `casa-basico` o `casa-aleatorio` (`POST /api/practice`);
+- registrar la entrega (`PUT /api/me/submission`), con la misma validación del OpenAPI;
+- las partidas del equipo (`GET /api/games`, filtradas por team ID).
+
+Dónde queda cada dato: la URL y el team ID se recuerdan en ese navegador (`localStorage`); el **token solo
+en esa pestaña** (`sessionStorage`) y se borra al cerrarla o con **Olvidar token**. El token va únicamente
+al árbitro: nunca a la API de la app, a un log ni al repo. El bot del torneo sigue leyendo su `.env`.
+
+Para que funcione, el árbitro debe aceptar peticiones desde el navegador (CORS). El árbitro de prueba en
+Vercel lo hace; el oficial se confirma el jueves. Si no lo permite, el panel muestra "No se pudo conectar"
+y queda `curl` como respaldo.
+
 ### Dependencias de la web
 
 | Paquete | Versión | Para qué |
