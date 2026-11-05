@@ -110,6 +110,24 @@ describe('control del bot del torneo', () => {
     expect(same.statusCode).toBe(200);
   });
 
+  it('DNS rebinding (dominio ajeno que apunta a 127.0.0.1) → 403 aunque Origin y Host coincidan', async () => {
+    const app = await start();
+    const rebound = { origin: 'http://evil.example:8080', host: 'evil.example:8080' };
+    const stop = await app.inject({
+      method: 'POST',
+      url: '/api/control/stop',
+      payload: {},
+      headers: rebound,
+    });
+    expect(stop.statusCode).toBe(403);
+    const read = await app.inject({ url: '/api/control', headers: { host: 'evil.example:8080' } });
+    expect(read.statusCode).toBe(403);
+    for (const host of ['localhost:5173', '[::1]:8080']) {
+      const ok = await app.inject({ url: '/api/control', headers: { host } });
+      expect(ok.statusCode).toBe(200);
+    }
+  });
+
   it('sin controlador las rutas no existen', async () => {
     const app = await start(false);
     expect((await app.inject({ url: '/api/control' })).statusCode).toBe(404);

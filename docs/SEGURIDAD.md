@@ -10,10 +10,11 @@ amenazas, mapeo OWASP y pasos S1–S4) está en `PLAN_CALIDAD_SEGURIDAD.md` §4.
 
 | Activo | Amenaza principal | Control |
 |---|---|---|
-| Token del equipo | que se filtre en el repo, un log o la pantalla | solo en `.env` de la máquina A; hook de git que bloquea su valor; el cliente lo guarda en un campo privado; los logs nunca lo reciben (probado) |
+| Token del equipo | que se filtre en el repo, un log o la pantalla | va en el `.env` de la máquina A o se escribe en **Mi equipo** en esa laptop: en el navegador solo en `sessionStorage` (se borra al cerrar la pestaña), en el servidor solo en memoria; campo de contraseña; hook de git que bloquea su valor; el cliente lo guarda en un campo privado; los logs nunca lo reciben (probado) |
+| Control del bot (`/api/control`) | que otra máquina del Wi-Fi u otra web detenga el bot en plena liga o lo apunte a otro árbitro | solo IP loopback, `Host` de esta computadora (`127.0.0.1`, `localhost`, `[::1]`) y mismo `Origin`; si no, 403. Un solo ciclo a la vez (409) |
 | El bot durante la liga | caída, CPU tomada por la app, derrota por tiempo | workers separados para torneo y app; temporizador de seguridad; respaldo; pausas ante errores |
 | API de la app | entradas maliciosas, ráfagas, SSRF por el proxy | esquemas estrictos, límites de tamaño y frecuencia, cola acotada, `game_id` validado y host fijo |
-| Navegador del jurado | XSS con los nombres de los equipos rivales | CSP estricta; React escapa por defecto; ESLint prohíbe `dangerouslySetInnerHTML` |
+| Navegador del jurado | XSS con los nombres de los equipos rivales | CSP sin scripts externos; React escapa por defecto; ESLint prohíbe `dangerouslySetInnerHTML`; la respuesta del árbitro en la web se valida con zod (`apps/web/src/arbiter/schema.ts`) |
 | Cadena de dependencias | paquete vulnerable o comprometido | lockfile + `npm ci`, `npm audit` en CI, Dependabot y justificación de cada dependencia |
 
 ## 2. Controles de la API (OWASP API Security Top 10, 2023)
@@ -24,7 +25,7 @@ amenazas, mapeo OWASP y pasos S1–S4) está en `PLAN_CALIDAD_SEGURIDAD.md` §4.
 | API3 datos de más | cada respuesta pasa por un esquema zod **estricto**: un campo no declarado es error | `packages/contracts` |
 | API4 consumo de recursos | cuerpo ≤ 4 KB; `moves` ≤ 56 enteros de 0 a 7; 120 peticiones/min por IP y 30 `bot-move`/min; **una** búsqueda a la vez por worker con cola de 3 (si no, 429 `busy`) | `http/app.ts`, `http/security.ts`, `chooser/worker-chooser.ts` |
 | API7 SSRF | `game_id` con `^[A-Za-z0-9_-]{1,64}$`; host fijo (`ARBITRO_URL`); sin redirecciones; timeout y tope de tamaño | `arbiter/public-client.ts`, `arbiter/http.ts` |
-| API8 configuración | helmet: CSP `default-src 'self'` y `frame-ancestors 'none'`, `nosniff`; sin CORS; solo `application/json`; errores sin stack trace; `HOST=127.0.0.1` por defecto | `http/security.ts`, `config.ts` |
+| API8 configuración | helmet: CSP `default-src 'self'` y `frame-ancestors 'none'`, `nosniff`; `connect-src` abierto solo a `https:` y al mock local para el panel **Mi equipo**; sin CORS; solo `application/json`; errores sin stack trace; `HOST=127.0.0.1` por defecto | `http/security.ts`, `config.ts` |
 | API10 consumo de APIs | respuestas del árbitro validadas con zod; un 3xx es error; nombres de equipos como texto | `arbiter/schema.ts`, `arbiter/http.ts` |
 
 ## 3. Pentest interno (`PLAN_CALIDAD_SEGURIDAD.md` §4.5)
@@ -53,3 +54,5 @@ amenazas, mapeo OWASP y pasos S1–S4) está en `PLAN_CALIDAD_SEGURIDAD.md` §4.
 | El límite por IP rechaza **toda** una ráfaga simultánea, no solo lo que excede | informativo | falla del lado seguro; se documenta. Un navegador hace una jugada a la vez |
 | 12 vulnerabilidades moderadas en `minimatch`, usada solo por ESLint | moderada, solo desarrollo | no llegan a producción; Dependabot las sigue |
 | CSP sin `'unsafe-inline'` en estilos | — | si la web lo necesita (F4), se decide y se documenta aquí |
+| Las rutas `/api/control` aceptaban un `Host` cualquiera: con DNS rebinding, una web abierta en la laptop del torneo podía apuntar su dominio a `127.0.0.1` y, con `Origin` y `Host` iguales, detener el bot en plena liga | media (requiere abrir una web maliciosa en la máquina A) | se exige además un `Host` de esta computadora; prueba en `http/control-routes.test.ts` |
+| El token del panel **Mi equipo** vive en el navegador y la CSP abre `connect-src` a `https:` | baja | no hay HTML de terceros (React escapa, sin `dangerouslySetInnerHTML`, `script-src 'self'`); el token solo dura la pestaña. En la máquina de demo no se escribe el token |
