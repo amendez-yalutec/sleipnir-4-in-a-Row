@@ -8,44 +8,50 @@ import { Bitboard, lastSpotsHi, winningSpotsLo } from './bitboard.ts';
 import { type Board, emptyBoard, isWinningMove, legalMoves, play, winner } from './rules.ts';
 
 const GAMES = 10_000;
+// En la máquina de GitHub Actions estas 10,000 partidas tardan ~95 s (en una laptop, ~21 s).
+const SLOW_CI_TIMEOUT_MS = 180_000;
 const choices = fc.array(fc.nat(), { minLength: 56, maxLength: 56 });
 
 describe('bitboard = reglas', () => {
-  it(`${GAMES} partidas: legalidad, jugada ganadora, tablero, victoria y empate coinciden`, () => {
-    const keys = new Map<string, string>();
-    fc.assert(
-      fc.property(choices, (picks) => {
-        let board: Board = emptyBoard();
-        const fast = new Bitboard();
-        for (const pick of picks) {
-          const legal = legalMoves(board);
-          const toMove = fast.toMove;
-          for (let column = 0; column < 8; column++) {
-            expect(fast.canPlay(column)).toBe(legal.includes(column));
-            if (legal.includes(column)) {
-              expect(fast.isWinningMove(column)).toBe(isWinningMove(board, column, toMove));
+  it(
+    `${GAMES} partidas: legalidad, jugada ganadora, tablero, victoria y empate coinciden`,
+    () => {
+      const keys = new Map<string, string>();
+      fc.assert(
+        fc.property(choices, (picks) => {
+          let board: Board = emptyBoard();
+          const fast = new Bitboard();
+          for (const pick of picks) {
+            const legal = legalMoves(board);
+            const toMove = fast.toMove;
+            for (let column = 0; column < 8; column++) {
+              expect(fast.canPlay(column)).toBe(legal.includes(column));
+              if (legal.includes(column)) {
+                expect(fast.isWinningMove(column)).toBe(isWinningMove(board, column, toMove));
+              }
             }
+            if (legal.length === 0) break; // empate: tablero lleno sin ganador
+            const column = legal[pick % legal.length];
+            board = play(board, column, toMove);
+            fast.play(column);
+
+            expect(fast.toBoard()).toEqual(board);
+            const key = `${fast.keyLo()}:${fast.keyHi()}:${fast.toMove}`;
+            const seen = keys.get(key);
+            const shape = JSON.stringify(board);
+            if (seen !== undefined) expect(seen).toBe(shape);
+            else if (keys.size < 300_000) keys.set(key, shape);
+
+            const won = winner(board) !== null;
+            expect(fast.lastMoverWon()).toBe(won);
+            if (won) break;
           }
-          if (legal.length === 0) break; // empate: tablero lleno sin ganador
-          const column = legal[pick % legal.length];
-          board = play(board, column, toMove);
-          fast.play(column);
-
-          expect(fast.toBoard()).toEqual(board);
-          const key = `${fast.keyLo()}:${fast.keyHi()}:${fast.toMove}`;
-          const seen = keys.get(key);
-          const shape = JSON.stringify(board);
-          if (seen !== undefined) expect(seen).toBe(shape);
-          else if (keys.size < 300_000) keys.set(key, shape);
-
-          const won = winner(board) !== null;
-          expect(fast.lastMoverWon()).toBe(won);
-          if (won) break;
-        }
-      }),
-      { numRuns: GAMES },
-    );
-  }, 60_000);
+        }),
+        { numRuns: GAMES },
+      );
+    },
+    SLOW_CI_TIMEOUT_MS,
+  );
 
   it('las amenazas por bits son exactamente las casillas vacías que completarían un cuatro', () => {
     fc.assert(

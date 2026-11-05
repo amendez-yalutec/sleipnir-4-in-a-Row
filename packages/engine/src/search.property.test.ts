@@ -21,6 +21,9 @@ import {
 } from './rules.ts';
 import { WIN, negamaxValue, search } from './search.ts';
 
+// En GitHub Actions la comparación contra minimax tarda ~55 s; 60 s no dejaba margen.
+const SLOW_CI_TIMEOUT_MS = 180_000;
+
 /** Posición al azar de una partida en curso. */
 const position = fc
   .tuple(fc.array(fc.nat(), { minLength: 56, maxLength: 56 }), fc.nat({ max: 50 }))
@@ -60,23 +63,31 @@ function minimax(board: Board, toMove: Player, depth: number, ply: number): numb
 }
 
 describe('propiedades de la búsqueda', () => {
-  it('en 1,000 posiciones al azar la jugada siempre es legal', () => {
-    fc.assert(
-      fc.property(position, fc.integer({ min: 1, max: 5 }), (p, depth) => {
-        expect(legalMoves(p.board)).toContain(search(p, { maxDepth: depth }).column);
-      }),
-      { numRuns: 1_000 },
-    );
-  }, 60_000);
+  it(
+    'en 1,000 posiciones al azar la jugada siempre es legal',
+    () => {
+      fc.assert(
+        fc.property(position, fc.integer({ min: 1, max: 5 }), (p, depth) => {
+          expect(legalMoves(p.board)).toContain(search(p, { maxDepth: depth }).column);
+        }),
+        { numRuns: 1_000 },
+      );
+    },
+    SLOW_CI_TIMEOUT_MS,
+  );
 
-  it('alfa-beta = minimax sin poda, a profundidad 1 a 4, con y sin tabla', () => {
-    fc.assert(
-      fc.property(position, fc.integer({ min: 1, max: 4 }), (p, depth) => {
-        const reference = minimax(p.board, p.toMove, depth, 0);
-        expect(negamaxValue(p, depth, false)).toBe(reference);
-        expect(negamaxValue(p, depth, true)).toBe(reference);
-      }),
-      { numRuns: 300 },
-    );
-  }, 60_000);
+  it(
+    'alfa-beta = minimax sin poda, a profundidad 1 a 4, con y sin tabla',
+    () => {
+      fc.assert(
+        fc.property(position, fc.integer({ min: 1, max: 4 }), (p, depth) => {
+          const reference = minimax(p.board, p.toMove, depth, 0);
+          expect(negamaxValue(p, depth, false)).toBe(reference);
+          expect(negamaxValue(p, depth, true)).toBe(reference);
+        }),
+        { numRuns: 300 },
+      );
+    },
+    SLOW_CI_TIMEOUT_MS,
+  );
 });

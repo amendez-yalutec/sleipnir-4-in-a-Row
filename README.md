@@ -45,6 +45,7 @@ Instala las dependencias y activa los hooks de git (ver [Calidad automática](#c
 | `npm run bench` | velocidad de la búsqueda (nodos/s) y profundidad con el presupuesto del torneo |
 | `npm run dev` | API (`:8080`) + app web con recarga en caliente (`http://localhost:5173`) |
 | `npm run build` | build de la app web en `apps/web/dist`; `npm run bot` la sirve en `http://127.0.0.1:8080` |
+| `npm run build:vercel` | build para Vercel en `.vercel/output`: la web como estáticos y la API de la app como función ([ver abajo](#app-web-en-vercel)) |
 | `npm run test:e2e` | pruebas de navegador (Playwright + axe) en modo **automático**: sin ventana, rápidas |
 | `npm run test:e2e:demo` | las mismas en modo **con pausas**: navegador visible y 1.5 s entre pasos para verlas |
 | `npm run lint` | ESLint, sin avisos permitidos |
@@ -315,6 +316,24 @@ artefacto `evidencias-e2e`. Estas capturas son de la corrida del 4 de noviembre 
 | Nueva partida | Ganaste: línea resaltada | Celular sin conexión |
 |---|---|---|
 | ![Pantalla de nueva partida: quién empieza y nivel](docs/assets/capturas/nueva-partida.png) | ![La persona ganó con cuatro fichas doradas en la fila de abajo, resaltadas en celeste](docs/assets/capturas/ganaste-linea-resaltada.png) | <img src="docs/assets/capturas/celular-sin-conexion.png" alt="En celular: mensaje 'No hay conexión con el bot' y botón Reintentar" width="180"> |
+
+## App web en Vercel
+
+La app también se puede jugar en línea. Vercel no levanta el servidor de `npm run bot` (un proceso que
+corre siempre), así que `npm run build:vercel` ([`scripts/vercel-build.ts`](scripts/vercel-build.ts)) arma
+con la [Build Output API](https://vercel.com/docs/build-output-api):
+
+- **estáticos:** el build de `apps/web`, con la misma CSP que la API;
+- **una función** con la API de la app ([`apps/bot/src/vercel/handler.ts`](apps/bot/src/vercel/handler.ts)):
+  usa el mismo `buildAppServer`, los mismos contratos y el mismo motor que el bot del torneo, con la
+  búsqueda en el hilo de la función en lugar de un worker;
+- **rutas:** `/api/*` va a la función; lo demás, a la web.
+
+Para conectarlo: Vercel → Add New → Project → importar este repo, con *Root Directory* en la raíz. Lo demás
+lo toma de [`vercel.json`](vercel.json). En Vercel **no** corre el ciclo del torneo (invariante 7) y el rate
+limit vive en la memoria de cada instancia. Variables opcionales: `THINK_SOFT_MS`, `THINK_HARD_MS`,
+`RATE_LIMIT_PER_MIN`, `BOT_MOVE_PER_MIN` y, para repetir partidas del torneo, `ARBITRO_URL` y `TEAM_ID`
+(nunca `TEAM_TOKEN`).
 
 ## Variables de entorno
 
