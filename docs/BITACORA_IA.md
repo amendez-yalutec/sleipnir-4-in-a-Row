@@ -401,3 +401,21 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
 - **Cómo lo verificamos:** pruebas de `apps/bot/src/vercel/handler.test.ts` y la función empaquetada
   corrida sola: `health`, `state`, `bot-move` en los tres niveles (Difícil tarda ~1.8 s y bloquea la línea
   de tres), jugada ilegal → 400, torneo sin `ARBITRO_URL` → 503 y CSP en cada respuesta.
+
+### 2026-11-05 — Panel "Mi equipo": conexión al árbitro desde la web
+
+- **Quién / herramienta:** Alberto Mendez / Claude Code.
+- **Pedido:** un formulario en la web para configurar la URL del árbitro, el team ID y el token, y usarlo
+  para ver la posición, crear prácticas y registrar la entrega.
+- **Decisiones:**
+  - el navegador habla directo con el árbitro: el token no pasa por nuestra API (invariante 11) y nuestra
+    API no se vuelve un proxy hacia cualquier URL;
+  - el token vive solo en `sessionStorage`; URL y team ID en `localStorage`;
+  - la CSP abre `connect-src` a `https:` y al árbitro simulado local; queda anotado como desviación.
+- **Qué salió mal y cómo se detectó:** la primera versión del hook llamaba a `setState` dentro del efecto
+  (`react-hooks/set-state-in-effect`), usaba una propiedad de parámetro en una clase (no permitida con
+  `erasableSyntaxOnly`) y la prueba tomaba métodos sueltos (`unbound-method`). Los detectaron el lint y
+  `tsc`, y se corrigieron antes del commit.
+- **Cómo lo verificamos:** 17 pruebas nuevas (configuración, cliente y pantalla con un árbitro falso) y una
+  corrida real con Playwright y Chrome contra el árbitro de prueba en Vercel: muestra posición y turnos,
+  crea la práctica, lista las partidas, 0 errores de consola y el token solo en `sessionStorage`.
