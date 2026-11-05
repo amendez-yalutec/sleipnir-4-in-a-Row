@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { ConfigError, loadConfig } from './config.ts';
 
 const TOKEN = 'TOKEN-DE-PRUEBA-NO-REAL-123';
-const PLAYING = { ARBITRO_URL: 'https://arbitro.example', TEAM_TOKEN: TOKEN };
+const PLAYING = {
+  ARBITRO_ENABLED: 'true',
+  ARBITRO_URL: 'https://arbitro.example',
+  TEAM_TOKEN: TOKEN,
+};
 
 function messageOf(env: Record<string, string>): string {
   try {
@@ -35,12 +39,18 @@ describe('configuración del bot', () => {
     expect(loadConfig({ ARBITRO_ENABLED: 'false' }).ARBITRO_ENABLED).toBe(false);
   });
 
-  it('las variables vacías de .env cuentan como no definidas', () => {
-    expect(messageOf({ ARBITRO_URL: '', TEAM_TOKEN: '' })).toMatch(/TEAM_TOKEN: falta/);
+  it('sin .env arranca en espera: la escucha se inicia desde la web', () => {
+    expect(loadConfig({}).ARBITRO_ENABLED).toBe(false);
   });
 
-  it('exige URL y token para jugar el torneo', () => {
-    const message = messageOf({});
+  it('las variables vacías de .env cuentan como no definidas', () => {
+    expect(messageOf({ ARBITRO_ENABLED: 'true', ARBITRO_URL: '', TEAM_TOKEN: '' })).toMatch(
+      /TEAM_TOKEN: falta/,
+    );
+  });
+
+  it('exige URL y token para jugar el torneo al arrancar', () => {
+    const message = messageOf({ ARBITRO_ENABLED: 'true' });
     expect(message).toContain('TEAM_TOKEN: falta');
     expect(message).toContain('ARBITRO_URL: falta');
   });

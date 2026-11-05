@@ -41,7 +41,7 @@ Instala las dependencias y activa los hooks de git (ver [Calidad automática](#c
 | `npm test` | **comando único de pruebas:** todas las pruebas + reporte de cobertura (en consola y en `coverage/index.html`) |
 | `npm run test:watch` | pruebas en modo observador mientras programas |
 | `npm run mock` | árbitro simulado en `http://127.0.0.1:8787` ([guía y partida con curl](tools/mock-arbiter/README.md)) |
-| `npm run bot` | API de la app en `:8080` y, con `ARBITRO_ENABLED=true`, el bot del torneo; lee `.env` |
+| `npm run bot` | API de la app en `:8080`; el bot del torneo se inicia desde la web (**Mi equipo**) o, con `ARBITRO_ENABLED=true`, al arrancar; lee `.env` |
 | `npm run bench` | velocidad de la búsqueda (nodos/s) y profundidad con el presupuesto del torneo |
 | `npm run dev` | API (`:8080`) + app web con recarga en caliente (`http://localhost:5173`) |
 | `npm run build` | build de la app web en `apps/web/dist`; `npm run bot` la sirve en `http://127.0.0.1:8080` |
@@ -382,7 +382,7 @@ repetir su valor.
 |---|---|---|---|
 | `ARBITRO_URL` | — | máquina A y demo | URL base del árbitro (se publica el jueves a las 8:00); `https` salvo el mock local |
 | `TEAM_TOKEN` | — | **solo máquina A** | token del equipo; nunca en el repo, los logs ni las capturas |
-| `ARBITRO_ENABLED` | `true` en el código, `false` en `.env.example` | máquina A | enciende el ciclo del torneo; en las demás máquinas va en `false` |
+| `ARBITRO_ENABLED` | `false` | máquina A, opcional | con `true`, el ciclo del torneo arranca solo al iniciar el servidor; si no, se inicia desde la web (**Mi equipo**) |
 | `PORT` / `HOST` | `8080` / `127.0.0.1` | todas | API de la app; `HOST=0.0.0.0` solo en la máquina de demo |
 | `THINK_SOFT_MS` / `THINK_HARD_MS` | `1400` / `1800` | todas | presupuesto de búsqueda por jugada |
 | `LONGPOLL_WAIT_S` | `20` | máquina A | espera del long polling del árbitro |
