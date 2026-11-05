@@ -21,6 +21,12 @@ export interface LoopOptions {
   /** Reloj monótono en ms. */
   readonly now?: () => number;
   readonly sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+  /**
+   * Hora (en el reloj `now`) a la que el ciclo deja de pedir turnos. Solo corta entre turnos: el long
+   * polling se acorta para terminar antes de esta hora y un turno recibido siempre se juega. Lo usa
+   * el cron de Vercel, que corre el ciclo por ventanas. Sin `until`, el ciclo sigue hasta `signal`.
+   */
+  readonly until?: number;
   /** Para `GET /api/health`: turnos, esperas, problemas y fin del ciclo. */
   readonly onEvent?: (event: LoopEvent) => void;
 }
@@ -72,11 +78,21 @@ export async function runArbiterLoop(options: LoopOptions): Promise<LoopStats> {
     await pause(delay);
   };
 
+  const waitS = options.waitS ?? 20;
+  /** Segundos de long polling que caben antes de `until`; `null` si ya no cabe ninguno. */
+  const allowedWait = (): number | null => {
+    if (options.until === undefined) return waitS;
+    const left = Math.floor((options.until - now()) / 1000);
+    return left >= 1 ? Math.min(waitS, left) : null;
+  };
+
   while (!signal.aborted) {
+    const wait = allowedWait();
+    if (wait === null) break;
     const askedAt = now();
     let next: NextResult;
     try {
-      next = parseNext(await client.next(options.waitS ?? 20, signal));
+      next = parseNext(await client.next(wait, signal));
     } catch (error) {
       if (signal.aborted) break;
       const reason = error instanceof ArbiterHttpError ? error.reason : 'network';

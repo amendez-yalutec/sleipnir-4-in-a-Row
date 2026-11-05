@@ -302,3 +302,67 @@ describe('pausas del ciclo con un cliente falso', () => {
     expect(pauses).toEqual([1000, 1000, 1000, 1000]);
   });
 });
+
+describe('ventana del ciclo (until, para el cron de Vercel)', () => {
+  const idle = { status: 200, body: { status: 'idle' } };
+  const turn = {
+    status: 200,
+    body: {
+      status: 'turn',
+      game_id: 'g1',
+      you: 1,
+      board: Array.from({ length: 7 }, () => Array<number>(8).fill(0)),
+      moves: [],
+      legal_moves: [0, 1, 2, 3, 4, 5, 6, 7],
+    },
+  };
+  const accepted = { status: 200, body: { ok: true, state: 'playing' } };
+
+  /** Reloj falso: cada long polling avanza el reloj lo que esperó. */
+  function windowRun(until: number, nextReply: (wait: number) => typeof idle) {
+    let clock = 0;
+    const waits: number[] = [];
+    const moves: number[] = [];
+    const run = runArbiterLoop({
+      client: {
+        next: (wait) => {
+          waits.push(wait);
+          clock += wait * 1000;
+          return Promise.resolve(nextReply(wait));
+        },
+        move: (_gameId, column) => {
+          moves.push(column);
+          return Promise.resolve(accepted);
+        },
+      },
+      chooser: fallbackChooser,
+      log: () => undefined,
+      signal: new AbortController().signal,
+      now: () => clock,
+      sleep: () => Promise.resolve(),
+      waitS: 20,
+      until,
+    });
+    return { run, waits, moves };
+  }
+
+  it('acorta el long polling para terminar antes de until y luego se detiene', async () => {
+    const { run, waits } = windowRun(50_000, () => idle);
+    await run;
+    expect(waits).toEqual([20, 20, 10]);
+  });
+
+  it('un turno recibido justo antes de until se juega igual', async () => {
+    const { run, waits, moves } = windowRun(1_500, () => turn);
+    const stats = await run;
+    expect(waits).toEqual([1]);
+    expect(moves).toHaveLength(1);
+    expect(stats).toMatchObject({ turns: 1, accepted: 1, problems: 0 });
+  });
+
+  it('si until ya pasó, no pide turnos', async () => {
+    const { run, waits } = windowRun(500, () => idle);
+    await run;
+    expect(waits).toEqual([]);
+  });
+});
