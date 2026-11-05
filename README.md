@@ -7,16 +7,18 @@
 Bot que juega Cuatro en línea en un tablero de **8 columnas × 7 filas** y una app web para jugar contra
 él. Challenge de IA de Yompi, Yalutec y Migo — jueves 5 de noviembre de 2026.
 
-> **Estado: pasos B1–B6, B9 + S1, F1–F4, F6 (diseño) y Q3 (E2E).** Ya existen la estructura, las
-> herramientas de calidad, las reglas, el árbitro simulado (OpenAPI 1.0.1), el cliente del torneo, la
-> búsqueda alfa-beta en workers (profundidad 17–25 en 1.4 s), la API de la app con sus controles de
-> seguridad, la **app web jugable** con el migo Design System y las pruebas de navegador con evidencias.
-> Faltan la arena, los logs a archivo, el endurecimiento final, la repetición del torneo en la web y el
-> manual.
+> **Estado: pasos B1–B6, B8 (workers), B9 + S1, F1–F4, F6 (diseño) y Q3 (E2E), más el panel "Mi equipo".**
+> Ya existen la estructura, las herramientas de calidad, las reglas, el árbitro simulado (OpenAPI 1.0.1),
+> el cliente del torneo, la búsqueda alfa-beta en workers (profundidad 17–25 en 1.4 s), la API de la app
+> con sus controles de seguridad, la **app web jugable** con el migo Design System, las pruebas de
+> navegador con evidencias y el **panel "Mi equipo"**: conexión al árbitro, prácticas, registro de la
+> entrega, tablero en vivo de nuestras partidas e **iniciar y detener la escucha del bot desde la web**.
+> Todo corre en la laptop del equipo ([por qué no en la nube](docs/TECNICO.md#9-despliegue-todo-en-la-laptop-por-qué-no-vercel)).
+> Faltan la arena, los logs a archivo, el endurecimiento final y el manual.
 
 ![La app web: el bot abrió en la columna 4 y explica cómo pensó: 17 jugadas de profundidad, 9.5 millones de posiciones, 1.49 s](docs/assets/capturas/bot-explica-su-jugada.png)
 
-**Contenido:** [Instalación](#instalación) · [Comandos](#comandos) · [Arquitectura](#arquitectura) ·
+**Contenido:** [Instalación](#instalación) · [Día del torneo](#día-del-torneo) · [Comandos](#comandos) · [Arquitectura](#arquitectura) ·
 [Stack](#stack-tecnológico) · [Backend](#inventario-del-backend) · [Frontend](#inventario-del-frontend) ·
 [Pruebas E2E](#pruebas-e2e-y-evidencias) · [Variables de entorno](#variables-de-entorno) ·
 [Calidad](#calidad-automática) · [Documentos](#documentos) · [Contactos](#equipo-y-contactos)
@@ -33,6 +35,34 @@ npm ci
 ```
 
 Instala las dependencias y activa los hooks de git (ver [Calidad automática](#calidad-automática)).
+
+## Día del torneo
+
+Todo en la **máquina A** (la laptop que juega), enchufada y con el reposo del sistema desactivado:
+
+```bash
+nvm use            # Node 22.22 o superior
+npm ci             # solo la primera vez
+npm run build      # compila la app web
+npm run bot        # deja esta terminal abierta todo el día
+```
+
+| Hora | Qué hacer |
+|---|---|
+| **8:00** | Abrir `http://127.0.0.1:8080/#equipo`. Escribir la **URL del árbitro**, el **team ID** y el **token** que entregan los organizadores → **Guardar y probar** → **Iniciar escucha** |
+| **8:00–8:15** | **Crear práctica** contra la casa y verla en el tablero de Mi equipo: confirma que el bot recibe y juega sus turnos |
+| **8:15–9:45** | Más prácticas o amistosos si hacen falta; ajustes de código en ramas y PR a `develop` → `main` |
+| **antes de 9:45** | **Registrar la entrega** en Mi equipo: URL del repo y hash del último commit de `main` |
+| **9:45 en adelante** | **No tocar nada.** El árbitro crea las partidas de la liga y de los playoffs; el bot las recibe solo con el long polling mientras siga escuchando |
+
+Qué cuidar:
+- **Un solo bot por token.** Nadie más del equipo prende otro bot con el mismo token.
+- Si la laptop se duerme, se cae la red o se detiene la escucha, cada turno que no se recoja en **30 s**
+  se pierde por ausencia.
+- **Si el panel no conecta con el árbitro oficial** ("No se pudo conectar"), es probable que el árbitro
+  no acepte llamadas desde el navegador (CORS). El bot no depende del navegador: poner en `.env`
+  `ARBITRO_ENABLED=true`, `ARBITRO_URL` y `TEAM_TOKEN`, reiniciar `npm run bot` (arranca escuchando) y
+  registrar la entrega con `curl -X PUT "$ARBITRO_URL/api/me/submission"` con el token.
 
 ## Comandos
 
@@ -121,9 +151,14 @@ hasta 4 KB.
 | `POST` | `/api/game/bot-move` | recibe `{ moves, level }`; el bot juega y explica su jugada (columna, profundidad, nodos, ms, puntaje) | [game-routes.ts:48](apps/bot/src/http/game-routes.ts#L48) |
 | `GET` | `/api/tournament/games` | partidas del torneo de nuestro equipo (`TEAM_ID`), leídas de las rutas públicas del árbitro **sin token** | [tournament-routes.ts:27](apps/bot/src/http/tournament-routes.ts#L27) |
 | `GET` | `/api/tournament/games/:id` | una partida con sus jugadas; `id` validado con `^[A-Za-z0-9_-]{1,64}$` antes de armar la URL | [tournament-routes.ts:42](apps/bot/src/http/tournament-routes.ts#L42) |
-| `GET` | `/*` | el build de la web (`WEB_DIR`), sin archivos ocultos | [app.ts:51](apps/bot/src/http/app.ts#L51) |
+| `GET` | `/api/control` | estado del bot del torneo: si escucha, contra qué árbitro y cuántas partidas lleva | [control-routes.ts](apps/bot/src/http/control-routes.ts) |
+| `POST` | `/api/control/start` | recibe `{ url, token }` e inicia la escucha del torneo (un solo bot a la vez) | [control-routes.ts](apps/bot/src/http/control-routes.ts) |
+| `POST` | `/api/control/stop` | detiene la escucha entre turnos | [control-routes.ts](apps/bot/src/http/control-routes.ts) |
+| `GET` | `/*` | el build de la web (`WEB_DIR`), sin archivos ocultos | [app.ts](apps/bot/src/http/app.ts) |
 
-Las dos rutas de torneo ya están en la API; la pantalla que las usa (F7) está pendiente.
+Las rutas `/api/control` solo aceptan peticiones de la misma computadora (IP loopback) y de la propia
+página (`Origin`), aunque el servidor escuche en `0.0.0.0`. El token vive solo en memoria y no se loguea.
+Las rutas `/api/tournament/*` siguen en la API; el panel "Mi equipo" lee las partidas directo del árbitro.
 
 **Códigos de error** (`{ error, message }`, con el mensaje en español):
 
@@ -131,7 +166,9 @@ Las dos rutas de torneo ya están en la API; la pantalla que las usa (F7) está 
 |---|---|---|
 | 400 | `validation` | el cuerpo no cumple el esquema, JSON mal formado o id de partida inválido |
 | 400 | `illegal_move` | una jugada cae fuera del tablero, en una columna llena o después del final |
+| 403 | `forbidden` | `/api/control` llamado desde otra computadora o desde otra página |
 | 404 | `not_found` | ruta, archivo o partida que no existe (los 403 de archivos también se responden 404) |
+| 409 | `conflict` | se pide iniciar la escucha cuando el bot ya está escuchando |
 | 413 · 415 | `validation` | cuerpo de más de 4 KB · `Content-Type` distinto de JSON |
 | 429 | `rate_limited` | se pasó el límite por IP |
 | 429 | `busy` | el worker de la app tiene la cola llena (3 pedidos) |
@@ -180,7 +217,8 @@ respuesta se valida contra el spec en las pruebas de contrato.
 - **Juego limpio:** ningún ciclo sin pausa. Error de red: 1, 2, 4 y 5 s. Token rechazado: de 5 a 60 s.
 - **API de la app:** `moves` es una lista de hasta 56 enteros de 0 a 7 y `level` es `easy`, `medium` o
   `hard`. Límites por IP: 120 peticiones/min y 30 `bot-move`/min. CSP `default-src 'self'` y
-  `frame-ancestors 'none'`.
+  `frame-ancestors 'none'`; `connect-src` permite además `https:` y el mock local para que el panel
+  "Mi equipo" hable con el árbitro.
 - **Niveles:** Fácil = profundidad 2 y 30 % de jugadas al azar, solo entre las que no pierden de
   inmediato. Medio = 150 ms. Difícil = el mismo presupuesto del torneo.
 
@@ -208,13 +246,19 @@ Código en [`apps/web/src/`](apps/web/src/).
 
 | Componente | Responsabilidad | Props |
 |---|---|---|
-| [`App`](apps/web/src/App.tsx) | arma las pantallas "Nueva partida" y "Partida" | `client: ApiClient`, `initialMoves?: string \| null` |
+| [`App`](apps/web/src/App.tsx) | pestañas **Jugar** y **Mi equipo** (`#equipo`); arma "Nueva partida", "Partida" y el panel | `client: ApiClient`, `initialMoves?: string \| null`, `makeArbiterClient?` (pruebas) |
 | [`Header`](apps/web/src/components/Header.tsx) | logo, nombre del equipo y estado del bot | `status: BotStatus` |
 | [`SetupPanel`](apps/web/src/components/SetupPanel.tsx) | quién empieza y nivel (Fácil, Medio, Difícil) | `humanFirst`, `level`, `onChange`, `onStart` |
 | [`Board`](apps/web/src/components/Board.tsx) | tablero 8×7: un botón con `aria-label` por columna, ficha que cae, línea ganadora resaltada | `game`, `human`, `interactive`, `pendingColumn?`, `onPlay` |
 | [`GameStatus`](apps/web/src/components/GameStatus.tsx) | de quién es el turno, resultado, avisos, "Reintentar" y "Jugar otra vez" | `phase`, `game`, `human`, `notice`, `onRetry`, `onPlayAgain` |
 | [`BotInsights`](apps/web/src/components/BotInsights.tsx) | "Cómo pensó el bot": columna, profundidad, posiciones, tiempo y veredicto | `insight: BotInsight \| null` |
 | [`MoveHistory`](apps/web/src/components/MoveHistory.tsx) | historial de jugadas en columnas 1–8 | `moves`, `human` |
+| [`TeamPanel`](apps/web/src/components/TeamPanel.tsx) | panel "Mi equipo": conexión, posición, prácticas, entrega, partidas y tablero | `api: ApiClient`, `makeClient?` (pruebas) |
+| [`ArbiterSettings`](apps/web/src/components/ArbiterSettings.tsx) | formulario de URL del árbitro, team ID y token | `config`, `onSave` |
+| [`TournamentControl`](apps/web/src/components/TournamentControl.tsx) | "Bot del torneo": iniciar y detener la escucha y ver su estado (solo si el servidor lo permite) | `api`, `config` |
+| [`TeamActions`](apps/web/src/components/TeamActions.tsx) | crear práctica contra la casa y registrar la entrega | `open`, `onPractice`, `onSubmit` |
+| [`GameViewer`](apps/web/src/components/GameViewer.tsx) | tablero en vivo de una partida del árbitro (cada 1.5 s), con `Board` en solo lectura | `client`, `gameId`, `teamId`, `onClose`, `onFinished?` |
+| [`Field`](apps/web/src/ui/field.tsx) | campo de texto con etiqueta y error accesibles | las nativas de `input`, más `label`, `hint`, `error` |
 | [`Button`](apps/web/src/ui/button.tsx), [`Card`](apps/web/src/ui/card.tsx) | base al estilo shadcn/ui; `Button` con variantes `primary` y `secondary` | las nativas de `button` y `section`, más `variant` |
 
 ### Hooks y servicios
@@ -223,7 +267,9 @@ Código en [`apps/web/src/`](apps/web/src/).
 |---|---|---|
 | [`useGame(client, initialMoves)`](apps/web/src/game/useGame.ts) | `{ state, game, send }`; llama a la API según la fase y escucha las teclas 1–8 | `POST /api/game/state`, `POST /api/game/bot-move` |
 | [`useBotStatus(client)`](apps/web/src/game/useBotStatus.ts) | `BotStatus`: en línea, sin conexión y estado del torneo; consulta cada 15 s | `GET /api/health` |
-| [`createApiClient()`](apps/web/src/api/client.ts) | `state(moves)`, `botMove(moves, level)`, `health()` → `ApiResult`: `ok`, o `rejected` / `failed` / `aborted` con mensaje en español | las tres anteriores |
+| [`createApiClient()`](apps/web/src/api/client.ts) | `state(moves)`, `botMove(moves, level)`, `health()`, `control()`, `startListening(url, token)`, `stopListening()` → `ApiResult`: `ok`, o `rejected` / `failed` / `aborted` con mensaje en español | nuestra API |
+| [`useTeamPanel()`](apps/web/src/arbiter/useTeamPanel.ts) | configuración guardada, datos del equipo y sus partidas; `practice`, `submit`, `refresh` | el árbitro, vía `createArbiterClient` |
+| [`createArbiterClient(config)`](apps/web/src/arbiter/client.ts) | `health()`, `me()`, `practice()`, `submit()`, `teamGames()`, `game(id)`; sin redirecciones, timeout de 10 s | el árbitro (`/api/me`, `/api/practice`, `/api/me/submission`, `/api/games`) |
 | [`createFakeClient()`](apps/web/src/api/fake-client.ts) | el mismo contrato en memoria, con el motor real; solo lo importan las pruebas | ninguna |
 | [`ui/coords.ts`](apps/web/src/ui/coords.ts) | única conversión entre columnas 0–7 (código) y 1–8 (pantalla) | ninguna |
 
@@ -233,6 +279,7 @@ Código en [`apps/web/src/`](apps/web/src/).
 |---|---|---|
 | `/` | "Nueva partida" y, al empezar, "Partida" (sin router: cambia según la fase) | ninguna: es una app pública en la red local; la API tiene límites por IP, CSP y esquemas estrictos |
 | `/?moves=3,4,3` | carga una posición (columnas 0–7, hasta 56) para demos y pruebas | la API valida cada jugada |
+| `/#equipo` | panel "Mi equipo" | el token lo escribe la persona; iniciar y detener la escucha solo desde esta computadora |
 
 ### Gestión de estado
 
@@ -276,7 +323,7 @@ La pestaña **Mi equipo** (`#equipo`) tiene un formulario con la **URL del árbi
 
 Dónde queda cada dato: la URL y el team ID se recuerdan en ese navegador (`localStorage`); el **token solo
 en esa pestaña** (`sessionStorage`) y se borra al cerrarla o con **Olvidar token**. El token va únicamente
-al árbitro: nunca a la API de la app, a un log ni al repo. El bot del torneo sigue leyendo su `.env`.
+al árbitro y, al dar **Iniciar escucha**, al servidor de esta misma computadora: nunca a un log ni al repo.
 
 **Bot del torneo: iniciar y detener desde la web.** En la app de la laptop (`npm run bot`, en
 `http://127.0.0.1:8080`) el panel tiene la tarjeta **Bot del torneo**, con los botones **Iniciar escucha** y
@@ -365,7 +412,7 @@ repetir su valor.
 | Variable | Por defecto | Entorno | Uso |
 |---|---|---|---|
 | `ARBITRO_URL` | — | máquina A y demo | URL base del árbitro (se publica el jueves a las 8:00); `https` salvo el mock local |
-| `TEAM_TOKEN` | — | **solo máquina A** | token del equipo; nunca en el repo, los logs ni las capturas |
+| `TEAM_TOKEN` | — | **solo máquina A**, opcional | token del equipo si el bot arranca desde `.env`; si no, se escribe en **Mi equipo**. Nunca en el repo, los logs ni las capturas |
 | `ARBITRO_ENABLED` | `false` | máquina A, opcional | con `true`, el ciclo del torneo arranca solo al iniciar el servidor; si no, se inicia desde la web (**Mi equipo**) |
 | `PORT` / `HOST` | `8080` / `127.0.0.1` | todas | API de la app; `HOST=0.0.0.0` solo en la máquina de demo |
 | `THINK_SOFT_MS` / `THINK_HARD_MS` | `1400` / `1800` | todas | presupuesto de búsqueda por jugada |
@@ -390,7 +437,7 @@ repetir su valor.
 **Jugar contra el bot en el navegador:**
 
 ```bash
-npm run build && ARBITRO_ENABLED=false npm run bot
+npm run build && npm run bot
 ```
 
 y abrir `http://127.0.0.1:8080`. En la máquina de demo, con `HOST=0.0.0.0`, también se abre desde un
@@ -403,11 +450,13 @@ npm run mock
 ```
 
 ```bash
-ARBITRO_URL=http://127.0.0.1:8787 TEAM_TOKEN=token-local-eq6 npm run bot
+ARBITRO_ENABLED=true ARBITRO_URL=http://127.0.0.1:8787 TEAM_TOKEN=token-local-eq6 npm run bot
 ```
 
-Luego se crean partidas de práctica con `curl` (ver [guía del mock](tools/mock-arbiter/README.md)). El
-bot escribe un JSON por línea: una línea `jugada` por turno y `warn`/`error` si algo no cuadra.
+O bien `npm run bot` y, en **Mi equipo**, URL `http://127.0.0.1:8787`, team ID `eq6`, token
+`token-local-eq6` e **Iniciar escucha**. Luego se crean partidas de práctica con `curl` (ver
+[guía del mock](tools/mock-arbiter/README.md)). El bot escribe un JSON por línea: una línea `jugada` por
+turno y `warn`/`error` si algo no cuadra.
 
 ## Estructura
 
@@ -457,7 +506,7 @@ y resumen de cobertura en el job; luego E2E con Playwright + axe y sus evidencia
 | [`AGENTS.md`](AGENTS.md) | reglas que siguen los agentes de IA en este repo (`CLAUDE.md` lo importa) |
 | [`.claude/agents/`](.claude/agents/) | subagentes de Claude Code para tareas que se repiten (ver abajo) |
 | [`docs/SEGURIDAD.md`](docs/SEGURIDAD.md) | amenazas, controles y resultados del pentest interno |
-| [`docs/TECNICO.md`](docs/TECNICO.md) | cómo funciona el motor, rendimiento, pruebas y desviaciones del plan |
+| [`docs/TECNICO.md`](docs/TECNICO.md) | cómo funciona el motor, rendimiento, pruebas, desviaciones del plan y por qué todo corre en la laptop |
 | [`docs/BITACORA_IA.md`](docs/BITACORA_IA.md) | cómo usamos la IA: qué pedimos, qué falló, cómo lo verificamos |
 
 ## Subagentes de Claude Code
@@ -484,9 +533,9 @@ sesión en este repo, y se invocan por nombre ("usa el agente revisor-rubrica…
 
 | Nombre | Rol |
 |---|---|
-| Luis Eduardo Godoy Morales | Fullstack Developer |
-| Henry David Juárez Alvarado | Support |
-| Pedro Alexander Lancerio Alvarado | Fullstack Developer |
-| Daniel Alberto Mendez Díaz | Fullstack Developer |
+| Luis Eduardo Godoy Morales | Security & Compliance Lead · Fullstack Developer |
+| Daniel Alberto Mendez Díaz | IA & Ops Lead · Fullstack Developer |
+| Pedro Alexander Lancerio Alvarado | Frontend · Fullstack Developer |
+| Henry David Juárez Alvarado | Herramientas tecnológicas · Support |
 
 Roles en el challenge y responsables por paso: `PLAN_BACKEND.md` §0.
