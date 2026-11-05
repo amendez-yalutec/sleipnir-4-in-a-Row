@@ -270,7 +270,10 @@ La pestaña **Mi equipo** (`#equipo`) tiene un formulario con la **URL del árbi
 - posición, puntos, turnos pendientes y entrega registrada (`GET /api/me`);
 - crear una práctica contra `casa-basico` o `casa-aleatorio` (`POST /api/practice`);
 - registrar la entrega (`PUT /api/me/submission`), con la misma validación del OpenAPI;
-- las partidas del equipo (`GET /api/games`, filtradas por team ID).
+- las partidas del equipo (`GET /api/games`, filtradas por team ID);
+- **el tablero de una partida en vivo** (`GET /api/games/{id}` cada 1.5 s): la que el equipo está jugando
+  se abre sola, y cualquier partida de la lista se abre con un clic. Nuestro bot va con fichas blancas y
+  el rival con doradas; al terminar, el tablero queda con el resultado y la lista se actualiza.
 
 Dónde queda cada dato: la URL y el team ID se recuerdan en ese navegador (`localStorage`); el **token solo
 en esa pestaña** (`sessionStorage`) y se borra al cerrarla o con **Olvidar token**. El token va únicamente
