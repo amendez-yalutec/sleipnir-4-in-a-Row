@@ -5,6 +5,9 @@
  *
  * Seguridad (además de los controles generales de `security.ts`):
  * - solo desde esta computadora: la IP de la petición debe ser loopback, aunque `HOST=0.0.0.0`;
+ * - solo con un `Host` de esta computadora (`127.0.0.1`, `localhost`, `[::1]`): corta el DNS
+ *   rebinding, en el que una web apunta su propio dominio a 127.0.0.1 y su `Origin` coincide con
+ *   ese `Host` (sin esto podría detener el bot en plena liga);
  * - solo desde nuestra página: si llega `Origin`, debe ser el mismo host (otra web no puede mandar el
  *   token ni apagar el bot; además el JSON obliga al navegador a pedir permiso CORS, que no damos);
  * - el token se usa para el ciclo y no aparece en respuestas ni logs.
@@ -15,6 +18,17 @@ import type { TournamentController } from '../arbiter/controller.ts';
 import { sendError } from './security.ts';
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+const LOCAL_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]']);
+
+function localHost(request: FastifyRequest): boolean {
+  const host = request.headers.host;
+  if (host === undefined) return false;
+  try {
+    return LOCAL_HOSTNAMES.has(new URL(`http://${host}`).hostname);
+  } catch {
+    return false;
+  }
+}
 
 function sameOrigin(request: FastifyRequest): boolean {
   const origin = request.headers.origin;
@@ -27,7 +41,7 @@ function sameOrigin(request: FastifyRequest): boolean {
 }
 
 function forbidden(request: FastifyRequest, reply: FastifyReply): boolean {
-  if (LOOPBACK.has(request.ip) && sameOrigin(request)) return false;
+  if (LOOPBACK.has(request.ip) && localHost(request) && sameOrigin(request)) return false;
   void sendError(reply, 403, {
     error: 'forbidden',
     message: 'El bot del torneo solo se controla desde la página abierta en esta computadora.',
