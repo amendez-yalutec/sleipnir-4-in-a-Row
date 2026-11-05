@@ -1,14 +1,12 @@
 /**
- * Arranque del servicio: la API de la app (siempre) y, con `ARBITRO_ENABLED=true`, el ciclo del
- * torneo. Cada uno busca en su propio worker, así una partida en la app no le quita tiempo al bot
+ * Arranque del servicio: la API de la app (siempre) y el ciclo del torneo, que se inicia y detiene
+ * desde la web ("Mi equipo") o, con `ARBITRO_ENABLED=true` en `.env`, al arrancar. Cada uno busca en su propio worker, así una partida en la app no le quita tiempo al bot
  * que juega la liga (PLAN_BACKEND.md §3).
  * Desarrollo: `npm run bot` (lee .env). Torneo: build y supervisor en B10.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ArbiterClient } from './arbiter/client.ts';
-import { runArbiterLoop } from './arbiter/loop.ts';
-import { ArbiterMonitor } from './arbiter/monitor.ts';
+import { TournamentController } from './arbiter/controller.ts';
 import { PublicArbiter } from './arbiter/public-client.ts';
 import { WorkerChooser } from './chooser/worker-chooser.ts';
 import { ConfigError, loadConfig } from './config.ts';
@@ -29,14 +27,23 @@ try {
 const rootPackage = new URL('../../../package.json', import.meta.url);
 const { version } = JSON.parse(readFileSync(rootPackage, 'utf8')) as { version: string };
 const think = { softMs: config.THINK_SOFT_MS, hardMs: config.THINK_HARD_MS };
-const monitor = new ArbiterMonitor(config.ARBITRO_ENABLED);
 const appChooser = new WorkerChooser({ tableBits: 18, maxQueue: 3 });
+// El bot del torneo busca en su propio worker, listo antes de que lo inicien desde la web o el .env.
+const tournamentChooser = new WorkerChooser({ tableBits: 20, maxQueue: 0 });
+await tournamentChooser.warmUp();
+const control = new TournamentController({
+  chooser: tournamentChooser,
+  log,
+  waitS: config.LONGPOLL_WAIT_S,
+  think,
+});
 
 const app = await buildAppServer({
   version,
   chooser: appChooser,
   think,
-  arbiterStatus: () => monitor.snapshot(),
+  arbiterStatus: () => control.snapshot(),
+  control,
   ...(config.ARBITRO_URL && {
     tournament: {
       arbiter: new PublicArbiter({ baseUrl: config.ARBITRO_URL }),
@@ -50,39 +57,15 @@ const app = await buildAppServer({
 const url = await app.listen({ port: config.PORT, host: config.HOST });
 log('info', 'api_lista', { url, host: config.HOST });
 
-const controller = new AbortController();
-let tournamentChooser: WorkerChooser | null = null;
 const shutdown = () => {
-  controller.abort();
-  void Promise.all([app.close(), appChooser.close(), tournamentChooser?.close()]).then(() =>
-    process.exit(0),
-  );
+  void Promise.all([control.stop(), app.close(), appChooser.close()])
+    .then(() => tournamentChooser.close())
+    .then(() => process.exit(0));
 };
 for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, shutdown);
 
-if (!config.ARBITRO_ENABLED || !config.ARBITRO_URL || !config.TEAM_TOKEN) {
-  log('info', 'arbitro_desactivado', { motivo: 'ARBITRO_ENABLED=false' });
+if (config.ARBITRO_ENABLED && config.ARBITRO_URL && config.TEAM_TOKEN) {
+  control.start(config.ARBITRO_URL, config.TEAM_TOKEN);
 } else {
-  const client = new ArbiterClient({ baseUrl: config.ARBITRO_URL, token: config.TEAM_TOKEN });
-  tournamentChooser = new WorkerChooser({ tableBits: 20, maxQueue: 0 });
-  await tournamentChooser.warmUp();
-  log('info', 'arranque', {
-    arbitro: client.host,
-    token: 'configurado',
-    wait_s: config.LONGPOLL_WAIT_S,
-    think_soft_ms: think.softMs,
-    think_hard_ms: think.hardMs,
-    eleccion: 'búsqueda alfa-beta en un worker, con temporizador de seguridad y respaldo',
-  });
-  const stats = await runArbiterLoop({
-    client,
-    chooser: tournamentChooser,
-    log,
-    signal: controller.signal,
-    waitS: config.LONGPOLL_WAIT_S,
-    thinkSoftMs: think.softMs,
-    thinkHardMs: think.hardMs,
-    onEvent: monitor.onEvent,
-  });
-  log('info', 'detenido', { ...stats });
+  log('info', 'arbitro_en_espera', { motivo: 'se inicia desde la web (Mi equipo) o con .env' });
 }
