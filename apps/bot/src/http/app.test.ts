@@ -314,6 +314,8 @@ describe('pentest interno (§4.5)', () => {
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
+    // El navegador solo puede conectarse a HTTPS o al árbitro simulado local (panel "Mi equipo").
+    expect(csp).toContain("connect-src 'self' https: http://localhost:* http://127.0.0.1:*");
     expect(response.headers['x-content-type-options']).toBe('nosniff');
     expect(response.headers['access-control-allow-origin']).toBeUndefined();
     expect(response.headers['x-powered-by']).toBeUndefined();

@@ -44,7 +44,9 @@ export async function registerSecurity(
         styleSrc: ["'self'"],
         imgSrc: ["'self'", 'data:'],
         fontSrc: ["'self'"],
-        connectSrc: ["'self'"],
+        // El panel "Mi equipo" llama al árbitro desde el navegador: cualquier HTTPS (la URL la
+        // configura el equipo) y el árbitro simulado en esta computadora. Nada más.
+        connectSrc: ["'self'", 'https:', 'http://localhost:*', 'http://127.0.0.1:*'],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
