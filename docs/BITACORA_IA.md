@@ -448,3 +448,16 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
 - **Cómo lo verificamos:** pruebas del visor con un árbitro falso (se abre solo, se abre con clic, se
   cierra, se queda al terminar y refresca la lista) y una corrida real con Chrome contra el árbitro de
   prueba: tablero en vivo a mitad de partida, victoria a casa-basico en 7 jugadas, 0 errores de consola.
+
+### 2026-11-05 — Se retira el despliegue en Vercel
+
+- **Quién / herramienta:** Alberto Mendez / Claude Code.
+- **Decisión:** todo queda en la laptop. Se quitan la función de la API para Vercel
+  (`apps/bot/src/vercel/`), `scripts/vercel-build.ts`, `vercel.json`, el script `build:vercel` y la
+  dependencia `rolldown`. La rama `feature/bot-en-vercel` (el bot por cron) no se integró.
+- **Por qué:** Vercel no mantiene procesos vivos. El bot del torneo necesita long polling continuo y en
+  Vercel solo se podía por ventanas de un cron, con huecos y riesgo de perder por ausencia; la app web
+  necesitaba una segunda copia de la API. El detalle está en `docs/TECNICO.md` § 9.
+- **Qué se conserva:** el panel "Mi equipo" (habla con el árbitro desde el navegador) y el control de la
+  escucha desde la web, que funcionan en la laptop.
+
