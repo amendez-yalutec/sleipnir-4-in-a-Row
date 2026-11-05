@@ -1,0 +1,36 @@
+{
+  "name": "@equipo6/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "App web para jugar contra el bot (PLAN_FRONTEND.md). React + Vite + Tailwind.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@equipo6/contracts": "0.1.0",
+    "@fontsource-variable/outfit": "^5.3.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@equipo6/engine": "0.1.0",
+    "@tailwindcss/vite": "^4.3.4",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "jsdom": "^30.1.3",
+    "tailwindcss": "^4.3.4",
+    "vite": "^8.3.5"
+  }
+}

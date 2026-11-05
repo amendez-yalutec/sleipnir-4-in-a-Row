@@ -1,0 +1,100 @@
+@import 'tailwindcss';
+
+/*
+ * Tema del proyecto con los tokens del migo Design System (Figma "001 - migo Design System", modo
+ * migo-light). Junto a cada valor va el nombre de su variable en Figma. Todos los colores, radios,
+ * sombras y la tipografía de la app salen de aquí (PLAN_FRONTEND.md §8).
+ *
+ * Fichas del tablero: la de la persona es dorada y la del bot blanca. Se distinguen por color, por
+ * luminosidad y por forma (la dorada lleva un anillo interior), no solo por color (daltonismo).
+ */
+@theme {
+  /* Tipografía: Outfit (OFL), servida desde nuestro propio servidor. */
+  --font-sans: 'Outfit Variable', 'Outfit', ui-sans-serif, system-ui, sans-serif;
+
+  /* Superficies */
+  --color-page: #f2f6fc; /* Surface/canvas */
+  --color-surface: #ffffff; /* Surface/default */
+  --color-subtle: #f4f6f8; /* Surface/subtle */
+
+  /* Texto */
+  --color-ink: #212429; /* Text/Primary */
+  --color-muted: #667799; /* Text/Secondary (solo sobre blanco: sobre canvas no llega a AA) */
+
+  /* Bordes y controles */
+  --color-line: #c5ccd8; /* Surface/raised: separadores suaves */
+  --color-line-strong: #a4afc3; /* Border/Default */
+  --color-control: #8493ae; /* Control/border/default */
+
+  /* Acción */
+  --color-accent: #0076ff; /* Action/default · Brand colors/Primary */
+  --color-accent-hover: #458dff; /* Action/hover */
+  --color-accent-pressed: #1155cc; /* Action/pressed · Brand colors/Secondary */
+  --color-halo: #c0d7fe; /* Control/halo/focus */
+  --color-disabled: #f4f6f8; /* Action/disabled */
+  --color-disabled-ink: #a4afc3; /* Text/Disabled */
+
+  /* Feedback */
+  --color-success: #1f944f; /* Feedback/success/text */
+  --color-success-soft: #e9fdf1; /* Feedback/success/surface */
+  --color-success-dot: #2fcc71; /* Feedback/success/elements */
+  --color-warning: #aa6501; /* Feedback/alert/text */
+  --color-warning-soft: #fff9f0; /* Feedback/alert/surface */
+  --color-danger: #bb1b33; /* Feedback/error/text */
+  --color-danger-soft: #ffeaec; /* Feedback/error/surface */
+  --color-danger-dot: #ff304c; /* Feedback/error/elements */
+  --color-info: #0052a0; /* Text/Info */
+  --color-info-soft: #daf8ff; /* Feedback/info/surface */
+
+  /* Tablero */
+  --color-board: #1155cc; /* Brand colors/Secondary */
+  --color-hole: rgb(33 36 41 / 0.35); /* Surface/inverse al 35 % sobre el tablero */
+  --color-human: #e9bb1d; /* Feedback/alert/elements */
+  --color-human-edge: #aa6501; /* Feedback/alert/text */
+  --color-bot: #ffffff; /* Surface/default */
+  --color-bot-edge: #a4afc3; /* Border/Default */
+  --color-highlight: #03d0ff; /* Brand colors/Terthiary: línea ganadora */
+
+  /* Radios (Layout/radius) */
+  --radius-control: 1rem; /* botón Large: 16 px */
+  --radius-panel: 1rem; /* radius/lg: alertas, paneles */
+  --radius-card: 1.5rem; /* radius/xl: card de contenido */
+  --radius-board: 1.5rem; /* radius/xl */
+
+  /* Sombras (Effect/shadow = negro al 10 %; la del tablero es la de marca del sistema) */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
+  --shadow-board: 0 16px 16px rgb(0 118 255 / 0.1);
+
+  --animate-drop: drop 250ms cubic-bezier(0.3, 0, 0.6, 1);
+  --animate-win: win 1.2s ease-in-out infinite;
+
+  @keyframes drop {
+    from {
+      transform: translateY(-120%);
+      opacity: 0.6;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes win {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.08);
+    }
+  }
+}
+
+@layer base {
+  html {
+    @apply bg-page font-sans text-ink antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent-pressed;
+  }
+}
