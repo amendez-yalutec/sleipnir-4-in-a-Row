@@ -6,9 +6,11 @@
 import type { z } from 'zod';
 import type { ArbiterConfig } from './config.ts';
 import {
+  type GameDetail,
   type GameSummary,
   type Me,
   errorSchema,
+  gameDetailSchema,
   gamesSchema,
   healthSchema,
   meSchema,
@@ -44,6 +46,8 @@ export interface ArbiterClient {
   submit(repoUrl: string, commit: string): Promise<{ commit: string }>;
   /** Partidas recientes en las que juega el equipo configurado, de la más nueva a la más vieja. */
   teamGames(): Promise<GameSummary[]>;
+  /** Una partida con su tablero (ruta pública, sin token). */
+  game(id: string): Promise<GameDetail>;
 }
 
 export function createArbiterClient(
@@ -107,6 +111,7 @@ export function createArbiterClient(
         body: { repo_url: repoUrl, commit },
         auth: true,
       }),
+    game: (id) => call(`/api/games/${encodeURIComponent(id)}`, gameDetailSchema),
     teamGames: async () => {
       const games = await call('/api/games?limit=100', gamesSchema);
       return games.filter((game) =>

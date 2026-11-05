@@ -1,4 +1,5 @@
 /** Pantalla "Mi equipo": conexión al árbitro, resumen del equipo, acciones y partidas recientes. */
+import { useState } from 'react';
 import type { ApiClient } from '../api/types.ts';
 import type { ArbiterClient } from '../arbiter/client.ts';
 import type { ArbiterConfig } from '../arbiter/config.ts';
@@ -8,6 +9,7 @@ import { Button } from '../ui/button.tsx';
 import { Card, CardTitle } from '../ui/card.tsx';
 import { cn } from '../ui/cn.ts';
 import { ArbiterSettings } from './ArbiterSettings.tsx';
+import { GameViewer } from './GameViewer.tsx';
 import { TeamActions } from './TeamActions.tsx';
 import { TournamentControl } from './TournamentControl.tsx';
 
@@ -61,8 +63,13 @@ export interface TeamPanelProps {
 }
 
 export function TeamPanel({ api, makeClient }: TeamPanelProps) {
-  const { state, save, refresh, practice, submit } = useTeamPanel(makeClient);
+  const { state, client, save, refresh, practice, submit } = useTeamPanel(makeClient);
   const { config, me, games, notice } = state;
+  // Partida en el tablero: la que eligió la persona o, si no, la que el equipo está jugando.
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const live = games.find((game) => game.status === 'playing' && game.game_id !== dismissed);
+  const shown = chosen ?? live?.game_id ?? null;
 
   return (
     <div className="space-y-6">
@@ -79,6 +86,24 @@ export function TeamPanel({ api, makeClient }: TeamPanelProps) {
         >
           {notice.text}
         </p>
+      )}
+
+      {client && shown && (
+        <GameViewer
+          key={shown}
+          client={client}
+          gameId={shown}
+          teamId={config.teamId}
+          onClose={() => {
+            setChosen(null);
+            setDismissed(shown);
+          }}
+          onFinished={() => {
+            // Se queda abierta con el resultado aunque ya no esté "en curso".
+            setChosen(shown);
+            void refresh();
+          }}
+        />
       )}
 
       {config.url && (
@@ -127,15 +152,23 @@ export function TeamPanel({ api, makeClient }: TeamPanelProps) {
           ) : (
             <ul className="divide-y divide-line">
               {games.slice(0, 20).map((game) => (
-                <li
-                  key={game.game_id}
-                  className="flex flex-wrap justify-between gap-2 py-2 text-sm"
-                >
-                  <span>
-                    {game.players['1'].name} vs {game.players['2'].name}
-                    <span className="text-muted"> · {KINDS[game.kind] ?? game.kind}</span>
-                  </span>
-                  <span className="text-muted">{outcome(game, config.teamId)}</span>
+                <li key={game.game_id}>
+                  <button
+                    type="button"
+                    aria-label={`Ver tablero de ${game.game_id}`}
+                    aria-current={game.game_id === shown ? 'true' : undefined}
+                    onClick={() => setChosen(game.game_id)}
+                    className={cn(
+                      'flex w-full flex-wrap justify-between gap-2 rounded-control px-2 py-2 text-left text-sm hover:bg-subtle focus-visible:ring-4 focus-visible:ring-halo focus-visible:outline-none',
+                      game.game_id === shown && 'bg-subtle',
+                    )}
+                  >
+                    <span>
+                      {game.players['1'].name} vs {game.players['2'].name}
+                      <span className="text-muted"> · {KINDS[game.kind] ?? game.kind}</span>
+                    </span>
+                    <span className="text-muted">{outcome(game, config.teamId)}</span>
+                  </button>
                 </li>
               ))}
             </ul>

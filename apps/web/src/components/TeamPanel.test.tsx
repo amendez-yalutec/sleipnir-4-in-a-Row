@@ -6,6 +6,31 @@ import { App } from '../App.tsx';
 import { createFakeClient } from '../api/fake-client.ts';
 import { type ArbiterClient, ArbiterError } from '../arbiter/client.ts';
 
+const EMPTY_BOARD = Array.from({ length: 7 }, () => Array<number>(8).fill(0));
+
+/** Partida del árbitro con su tablero: nuestro equipo abre y lleva dos jugadas en la columna 3. */
+function detail(id: string, finished: boolean) {
+  const board = EMPTY_BOARD.map((row) => [...row]);
+  board[0][3] = 1;
+  board[0][4] = 2;
+  return {
+    game_id: id,
+    kind: 'practice',
+    status: finished ? 'finished' : 'playing',
+    players: {
+      '1': { team_id: 'eq6', name: 'Equipo 6' },
+      '2': { team_id: 'casa-basico', name: 'casa-basico', house: true },
+    },
+    moves: [
+      { turn: 1, by: 1 as const, column: 3 },
+      { turn: 2, by: 2 as const, column: 4 },
+    ],
+    current: finished ? null : (1 as const),
+    result: finished ? { winner: 1 as const, reason: 'connect4', winning_cells: [] } : null,
+    board,
+  };
+}
+
 function fakeArbiter(overrides: Partial<ArbiterClient> = {}): ArbiterClient {
   return {
     health: vi.fn(() => Promise.resolve({ phase: 'practice' })),
@@ -35,6 +60,7 @@ function fakeArbiter(overrides: Partial<ArbiterClient> = {}): ArbiterClient {
         },
       ]),
     ),
+    game: vi.fn((id: string) => Promise.resolve(detail(id, id !== 'g_p_09'))),
     ...overrides,
   };
 }
@@ -154,5 +180,50 @@ describe('panel Mi equipo', () => {
     await connect();
     await screen.findByRole('heading', { name: 'Equipo 6' });
     expect(screen.queryByRole('heading', { name: 'Bot del torneo' })).toBeNull();
+  });
+
+  it('la partida en curso del equipo aparece sola con su tablero', async () => {
+    const live = { ...detail('g_p_09', false), board: undefined };
+    openPanel(fakeArbiter({ teamGames: () => Promise.resolve([live]) }));
+    await connect();
+    expect(await screen.findByRole('heading', { name: 'Partida g_p_09' })).toBeTruthy();
+    expect(await screen.findByText('Turno de nuestro bot')).toBeTruthy();
+    expect(screen.getByText(/Blancas: Equipo 6 \(nuestro bot\)/)).toBeTruthy();
+    expect(screen.getByRole('group', { name: /Tablero de 8 columnas/ })).toBeTruthy();
+  });
+
+  it('una partida de la lista se abre con un clic y se cierra', async () => {
+    openPanel(fakeArbiter());
+    await connect();
+    await userEvent.click(await screen.findByRole('button', { name: 'Ver tablero de g_1' }));
+    expect(await screen.findByRole('heading', { name: 'Partida g_1' })).toBeTruthy();
+    // Una vez en la fila de la lista y otra en el visor.
+    expect(await screen.findAllByText('Ganamos por cuatro en línea')).toHaveLength(2);
+    await userEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByRole('heading', { name: 'Partida g_1' })).toBeNull();
+  });
+
+  it('al terminar la partida en vivo, el tablero se queda con el resultado y la lista se refresca', async () => {
+    let finished = false;
+    const summary = () => ({ ...detail('g_p_10', finished), board: undefined });
+    const teamGames = vi.fn(() => Promise.resolve([summary()]));
+    openPanel(
+      fakeArbiter({
+        teamGames,
+        game: () => {
+          const next = detail('g_p_10', finished);
+          finished = true; // la segunda consulta ya la ve terminada
+          return Promise.resolve(next);
+        },
+      }),
+    );
+    await connect();
+    expect(await screen.findByText('Turno de nuestro bot')).toBeTruthy();
+    const before = teamGames.mock.calls.length;
+    expect(
+      await screen.findAllByText('Ganamos por cuatro en línea', {}, { timeout: 4000 }),
+    ).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: 'Partida g_p_10' })).toBeTruthy();
+    expect(teamGames.mock.calls.length).toBeGreaterThan(before);
   });
 });
