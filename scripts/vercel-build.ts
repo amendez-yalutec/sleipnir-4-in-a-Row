@@ -1,8 +1,10 @@
 /**
  * Build para Vercel con la Build Output API v3 (https://vercel.com/docs/build-output-api):
  * 1. compila la app web (apps/web/dist) y la copia como estáticos;
- * 2. empaqueta la API de la app (apps/bot/src/vercel/handler.ts) en una sola función de Node;
- * 3. escribe las rutas: /api/* → función; el resto, estáticos con fallback a index.html.
+ * 2. empaqueta dos funciones de Node: la API de la app (apps/bot/src/vercel/handler.ts) y el bot del
+ *    torneo por ventanas (apps/bot/src/vercel/tournament.ts);
+ * 3. escribe las rutas (/api/cron/torneo → bot, /api/* → API, el resto → web) y el cron de cada
+ *    minuto que despierta al bot. El bot solo juega con ARBITRO_ENABLED=true (ver README).
  *
  * Uso: `npm run build:vercel` (Vercel lo corre solo, ver vercel.json).
  */
@@ -13,7 +15,27 @@ import { build } from 'rolldown';
 
 const root = resolve(import.meta.dirname, '..');
 const out = join(root, '.vercel', 'output');
-const fn = join(out, 'functions', 'api', 'index.func');
+
+/** Empaqueta `entry` como función de Vercel en `functions/<route>.func`. */
+async function bundleFunction(entry: string, route: string, maxDuration: number) {
+  const dir = join(out, 'functions', `${route}.func`);
+  mkdirSync(dir, { recursive: true });
+  await build({
+    input: join(root, 'apps', 'bot', 'src', 'vercel', entry),
+    platform: 'node',
+    logLevel: 'warn',
+    // Con platform: 'node', rolldown resuelve los `require` de las dependencias CommonJS (fastify).
+    output: { file: join(dir, 'index.mjs'), format: 'esm' },
+  });
+  const config = {
+    runtime: 'nodejs22.x',
+    handler: 'index.mjs',
+    launcherType: 'Nodejs',
+    shouldAddHelpers: false,
+    maxDuration,
+  };
+  writeFileSync(join(dir, '.vc-config.json'), JSON.stringify(config, null, 2));
+}
 
 /** La misma CSP que helmet pone a la API (apps/bot/src/http/security.ts), ahora también en la web. */
 const CSP = [
@@ -36,30 +58,11 @@ console.log('1/3 app web');
 execSync('npm run build', { cwd: root, stdio: 'inherit' });
 cpSync(join(root, 'apps', 'web', 'dist'), join(out, 'static'), { recursive: true });
 
-console.log('2/3 función de la API');
-mkdirSync(fn, { recursive: true });
-await build({
-  input: join(root, 'apps', 'bot', 'src', 'vercel', 'handler.ts'),
-  platform: 'node',
-  logLevel: 'warn',
-  // Con platform: 'node', rolldown resuelve los `require` de las dependencias CommonJS (fastify).
-  output: { file: join(fn, 'index.mjs'), format: 'esm' },
-});
-writeFileSync(
-  join(fn, '.vc-config.json'),
-  JSON.stringify(
-    {
-      runtime: 'nodejs22.x',
-      handler: 'index.mjs',
-      launcherType: 'Nodejs',
-      shouldAddHelpers: false,
-      // La búsqueda corta a THINK_HARD_MS (1.8 s); el margen cubre el arranque en frío.
-      maxDuration: 10,
-    },
-    null,
-    2,
-  ),
-);
+console.log('2/3 funciones');
+// API: la búsqueda corta a THINK_HARD_MS (1.8 s); el margen cubre el arranque en frío.
+await bundleFunction('handler.ts', 'api/index', 10);
+// Bot del torneo: ventana de 50 s más el último turno; el cron lo despierta cada minuto.
+await bundleFunction('tournament.ts', 'api/cron/torneo', 60);
 
 console.log('3/3 rutas');
 writeFileSync(
@@ -67,6 +70,7 @@ writeFileSync(
   JSON.stringify(
     {
       version: 3,
+      crons: [{ path: '/api/cron/torneo', schedule: '* * * * *' }],
       routes: [
         {
           src: '/(.*)',
@@ -77,6 +81,7 @@ writeFileSync(
           },
           continue: true,
         },
+        { src: '^/api/cron/torneo$', dest: '/api/cron/torneo' },
         { src: '^/api/(.*)$', dest: '/api/index' },
         { handle: 'filesystem' },
         { src: '/(.*)', dest: '/index.html' },
