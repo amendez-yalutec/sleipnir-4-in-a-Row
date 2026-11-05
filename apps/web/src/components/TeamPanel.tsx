@@ -1,4 +1,5 @@
 /** Pantalla "Mi equipo": conexión al árbitro, resumen del equipo, acciones y partidas recientes. */
+import type { ApiClient } from '../api/types.ts';
 import type { ArbiterClient } from '../arbiter/client.ts';
 import type { ArbiterConfig } from '../arbiter/config.ts';
 import type { GameSummary } from '../arbiter/schema.ts';
@@ -8,6 +9,7 @@ import { Card, CardTitle } from '../ui/card.tsx';
 import { cn } from '../ui/cn.ts';
 import { ArbiterSettings } from './ArbiterSettings.tsx';
 import { TeamActions } from './TeamActions.tsx';
+import { TournamentControl } from './TournamentControl.tsx';
 
 const REASONS: Readonly<Record<string, string>> = {
   connect4: 'cuatro en línea',
@@ -52,17 +54,20 @@ function Stat({ label, value }: { readonly label: string; readonly value: string
 }
 
 export interface TeamPanelProps {
+  /** Nuestra API: inicia y detiene el bot del torneo de esta computadora. */
+  readonly api: ApiClient;
   /** Solo para pruebas: cliente del árbitro falso. */
   readonly makeClient?: (config: ArbiterConfig) => ArbiterClient;
 }
 
-export function TeamPanel({ makeClient }: TeamPanelProps) {
+export function TeamPanel({ api, makeClient }: TeamPanelProps) {
   const { state, save, refresh, practice, submit } = useTeamPanel(makeClient);
   const { config, me, games, notice } = state;
 
   return (
     <div className="space-y-6">
       <ArbiterSettings config={config} onSave={save} />
+      <TournamentControl api={api} config={config} />
 
       {notice && (
         <p

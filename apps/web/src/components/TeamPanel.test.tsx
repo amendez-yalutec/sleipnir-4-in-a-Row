@@ -39,9 +39,9 @@ function fakeArbiter(overrides: Partial<ArbiterClient> = {}): ArbiterClient {
   };
 }
 
-function openPanel(arbiter: ArbiterClient) {
+function openPanel(arbiter: ArbiterClient, client = createFakeClient()) {
   const makeArbiterClient = vi.fn(() => arbiter);
-  render(<App client={createFakeClient()} makeArbiterClient={makeArbiterClient} />);
+  render(<App client={client} makeArbiterClient={makeArbiterClient} />);
   return makeArbiterClient;
 }
 
@@ -128,5 +128,31 @@ describe('panel Mi equipo', () => {
     location.hash = '';
     window.dispatchEvent(new HashChangeEvent('hashchange'));
     expect(await screen.findByRole('button', { name: 'Jugar' })).toBeTruthy();
+  });
+
+  it('en la laptop: inicia y detiene la escucha del bot con la URL y el token guardados', async () => {
+    const client = createFakeClient({ control: true });
+    openPanel(fakeArbiter(), client);
+    expect(await screen.findByRole('heading', { name: 'Bot del torneo' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Iniciar escucha' }).hasAttribute('disabled')).toBe(
+      true,
+    );
+
+    await connect();
+    await userEvent.click(screen.getByRole('button', { name: 'Iniciar escucha' }));
+    expect(await screen.findByText('Escuchando: esperando turno')).toBeTruthy();
+    expect(screen.getByText('· arbitro.example')).toBeTruthy();
+    expect(client.calls).toContain('start https://arbitro.example');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Detener escucha' }));
+    expect(await screen.findByRole('button', { name: 'Iniciar escucha' })).toBeTruthy();
+    expect(client.calls).toContain('stop');
+  });
+
+  it('donde no se puede controlar (Vercel), la tarjeta no aparece', async () => {
+    openPanel(fakeArbiter());
+    await connect();
+    await screen.findByRole('heading', { name: 'Equipo 6' });
+    expect(screen.queryByRole('heading', { name: 'Bot del torneo' })).toBeNull();
   });
 });

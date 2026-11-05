@@ -1,11 +1,13 @@
 /**
- * Cliente de nuestra API (nunca habla con el árbitro ni ve el token). Timeout de 10 s, respuestas
- * validadas con el contrato compartido y errores traducidos a frases para la persona.
+ * Cliente de nuestra API (nunca habla con el árbitro). Timeout de 10 s, respuestas validadas con el
+ * contrato compartido y errores traducidos a frases para la persona. La única llamada que lleva el
+ * token es `startListening`, y va al servidor del bot en esta misma computadora.
  */
 import {
   type ApiError,
   type Level,
   apiErrorSchema,
+  controlStatusSchema,
   gameStateSchema,
   healthSchema,
 } from '@equipo6/contracts';
@@ -21,6 +23,8 @@ const MESSAGES: Readonly<Record<ApiError['error'], string>> = {
   rate_limited: 'Muchas jugadas seguidas. Espera unos segundos e intenta de nuevo.',
   not_found: 'El servidor no reconoce esa petición.',
   tournament_unavailable: 'No se pudo consultar el torneo.',
+  forbidden: 'El bot del torneo solo se controla desde la página abierta en su computadora.',
+  conflict: 'El bot ya está escuchando. Detenlo antes de cambiar de árbitro.',
   internal: 'El servidor tuvo un problema. Intenta de nuevo.',
 };
 
@@ -73,5 +77,11 @@ export function createApiClient(fetchImpl: typeof fetch = fetch.bind(globalThis)
     botMove: (moves, level: Level, signal) =>
       call(fetchImpl, '/api/game/bot-move', gameStateSchema, post({ moves, level }), signal),
     health: (signal) => call(fetchImpl, '/api/health', healthSchema, { method: 'GET' }, signal),
+    control: (signal) =>
+      call(fetchImpl, '/api/control', controlStatusSchema, { method: 'GET' }, signal),
+    startListening: (url, token) =>
+      call(fetchImpl, '/api/control/start', controlStatusSchema, post({ url, token }), undefined),
+    stopListening: () =>
+      call(fetchImpl, '/api/control/stop', controlStatusSchema, post({}), undefined),
   };
 }
