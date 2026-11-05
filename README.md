@@ -7,14 +7,14 @@
 Bot que juega Cuatro en línea en un tablero de **8 columnas × 7 filas** y una app web para jugar contra
 él. Challenge de IA de Yompi, Yalutec y Migo — jueves 5 de noviembre de 2026.
 
-> **Estado: pasos B1–B6, B8 (workers), B9 + S1, F1–F4, F6 (diseño) y Q3 (E2E), más el panel "Mi equipo".**
+> **Estado: pasos B1–B6, B8 (workers), B9 + S1, F1–F4, F6 (diseño), F8 (manual) y Q3 (E2E), más el panel "Mi equipo".**
 > Ya existen la estructura, las herramientas de calidad, las reglas, el árbitro simulado (OpenAPI 1.0.1),
 > el cliente del torneo, la búsqueda alfa-beta en workers (profundidad 17–25 en 1.4 s), la API de la app
 > con sus controles de seguridad, la **app web jugable** con el migo Design System, las pruebas de
 > navegador con evidencias y el **panel "Mi equipo"**: conexión al árbitro, prácticas, registro de la
 > entrega, tablero en vivo de nuestras partidas e **iniciar y detener la escucha del bot desde la web**.
 > Todo corre en la laptop del equipo ([por qué no en la nube](docs/TECNICO.md#9-despliegue-todo-en-la-laptop-por-qué-no-vercel)).
-> Faltan la arena, los logs a archivo, el endurecimiento final y el manual.
+> Faltan la arena, los logs a archivo y el endurecimiento final. Para jugar sin saber programar: [manual de usuario](docs/MANUAL.md).
 
 ![La app web: el bot abrió en la columna 4 y explica cómo pensó: 17 jugadas de profundidad, 9.5 millones de posiciones, 1.49 s](docs/assets/capturas/bot-explica-su-jugada.png)
 
@@ -505,6 +505,7 @@ y resumen de cobertura en el job; luego E2E con Playwright + axe y sus evidencia
 | [`PLAN_CALIDAD_SEGURIDAD.md`](PLAN_CALIDAD_SEGURIDAD.md) | git y flujo de trabajo, entornos, QA, seguridad y pentest interno |
 | [`AGENTS.md`](AGENTS.md) | reglas que siguen los agentes de IA en este repo (`CLAUDE.md` lo importa) |
 | [`.claude/agents/`](.claude/agents/) | subagentes de Claude Code para tareas que se repiten (ver abajo) |
+| [`docs/MANUAL.md`](docs/MANUAL.md) | manual de usuario con capturas: cómo jugar contra el bot y qué es la pestaña Mi equipo |
 | [`docs/SEGURIDAD.md`](docs/SEGURIDAD.md) | amenazas, controles y resultados del pentest interno |
 | [`docs/TECNICO.md`](docs/TECNICO.md) | cómo funciona el motor, rendimiento, pruebas, desviaciones del plan y por qué todo corre en la laptop |
 | [`docs/BITACORA_IA.md`](docs/BITACORA_IA.md) | cómo usamos la IA: qué pedimos, qué falló, cómo lo verificamos |

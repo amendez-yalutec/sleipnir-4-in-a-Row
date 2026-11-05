@@ -477,3 +477,16 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
   CORS del mock (preflight local, lectura local y otros orígenes sin permiso). Corrida real con Playwright
   y Chrome: guardar la conexión, iniciar la escucha, práctica `g_p_01` ganada a casa-basico en el tablero
   en vivo, detener la escucha y 0 errores de consola.
+
+### 2026-11-05 — Manual de usuario (F8)
+
+- **Quién / herramienta:** Luis Godoy / Claude Code.
+- **Pedido:** el manual para alguien que no programa, con una captura por estado de la partida
+  (`PLAN_FRONTEND.md` §6 y F8).
+- **Qué devolvió:** `docs/MANUAL.md`, con las capturas de la corrida E2E del 5 de noviembre
+  (`01-19-54_automatico`, escritorio y celular) y dos de la pestaña Mi equipo en una prueba con el
+  árbitro simulado.
+- **Cómo lo verificamos:** cada texto que el manual cita (botones, avisos, veredictos de «Cómo pensó el
+  bot») se comparó con el código de `apps/web/src`, y lo que hacen Deshacer y Reiniciar con
+  `game/reducer.ts`; los niveles, con el README. Enlaces e imágenes revisados con un script.
+
