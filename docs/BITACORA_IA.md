@@ -461,3 +461,19 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
 - **Qué se conserva:** el panel "Mi equipo" (habla con el árbitro desde el navegador) y el control de la
   escucha desde la web, que funcionan en la laptop.
 
+### 2026-11-05 — Revisión de seguridad del panel "Mi equipo"
+
+- **Quién / herramienta:** Luis Godoy / Claude Code.
+- **Pedido:** revisar el panel "Mi equipo" y el control de la escucha antes del torneo.
+- **Qué encontró:**
+  - las rutas `/api/control` revisaban la IP y el `Origin`, pero no el `Host`. Con DNS rebinding, una web
+    abierta en la laptop del torneo podía apuntar su dominio a `127.0.0.1`; como `Origin` y `Host`
+    coinciden y la IP es local, podía detener el bot en plena liga. Ahora también se exige un `Host` de
+    esta computadora;
+  - el README decía que el panel funcionaba contra el árbitro simulado local, pero el mock no respondía
+    CORS y el navegador bloqueaba cada llamada ("No se pudo conectar"). El mock ahora acepta solo páginas
+    de `localhost` y `127.0.0.1`.
+- **Cómo lo verificamos:** la prueba de DNS rebinding falla sin el arreglo y pasa con él; 3 pruebas de
+  CORS del mock (preflight local, lectura local y otros orígenes sin permiso). Corrida real con Playwright
+  y Chrome: guardar la conexión, iniciar la escucha, práctica `g_p_01` ganada a casa-basico en el tablero
+  en vivo, detener la escucha y 0 errores de consola.
