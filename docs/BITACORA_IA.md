@@ -419,3 +419,19 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
 - **Cómo lo verificamos:** 17 pruebas nuevas (configuración, cliente y pantalla con un árbitro falso) y una
   corrida real con Playwright y Chrome contra el árbitro de prueba en Vercel: muestra posición y turnos,
   crea la práctica, lista las partidas, 0 errores de consola y el token solo en `sessionStorage`.
+
+### 2026-11-05 — Iniciar y detener la escucha del bot desde la web
+
+- **Quién / herramienta:** Alberto Mendez / Claude Code.
+- **Pedido:** dejar el bot del torneo solo en la laptop, pero iniciarlo y detenerlo desde la web en vez
+  de con `ARBITRO_ENABLED=true` al arrancar. Se descartó correrlo en Vercel con un cron (rama
+  `feature/bot-en-vercel`, sin integrar).
+- **Qué devolvió:** un `TournamentController` que corre un solo ciclo a la vez; rutas `/api/control`
+  (estado, iniciar y detener) protegidas por loopback y mismo origen; y la tarjeta "Bot del torneo" en
+  "Mi equipo", que usa la URL y el token del formulario.
+- **Qué salió mal y cómo se detectó:** en la prueba con navegador la tarjeta decía "Conectándose…"
+  hasta 20 s después de iniciar, porque el estado `starting` dura hasta que responde el primer long
+  polling. Para la persona el bot ya está escuchando; ahora lo dice así.
+- **Cómo lo verificamos:** pruebas del controlador, de las rutas (403 desde otra IP o desde otro origen,
+  409 si ya escucha, 404 sin controlador) y de la tarjeta; y una corrida real con Chrome: iniciar desde la
+  web, práctica `g_p_07` ganada a casa-basico en 9 jugadas, detener desde la web, 0 errores de consola.

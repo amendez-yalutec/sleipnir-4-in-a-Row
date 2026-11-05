@@ -276,6 +276,21 @@ Dónde queda cada dato: la URL y el team ID se recuerdan en ese navegador (`loca
 en esa pestaña** (`sessionStorage`) y se borra al cerrarla o con **Olvidar token**. El token va únicamente
 al árbitro: nunca a la API de la app, a un log ni al repo. El bot del torneo sigue leyendo su `.env`.
 
+**Bot del torneo: iniciar y detener desde la web.** En la app de la laptop (`npm run bot`, en
+`http://127.0.0.1:8080`) el panel tiene la tarjeta **Bot del torneo**, con los botones **Iniciar escucha** y
+**Detener escucha**. Así no hace falta `ARBITRO_ENABLED=true` ni reiniciar el servidor:
+
+1. `npm run bot` una vez (el servidor queda en espera, sin jugar).
+2. En **Mi equipo**, guarda la URL del árbitro y el token, y da **Iniciar escucha**.
+3. El bot de esta computadora pregunta por sus turnos y juega; la tarjeta muestra su estado.
+4. **Detener escucha** lo para entre turnos.
+
+El cómputo lo hace el servidor de la laptop; la página solo manda la orden. La URL y el token se pasan
+al servidor al iniciar y viven solo en su memoria mientras escucha. Las rutas (`/api/control`) solo
+aceptan peticiones de esa misma computadora y de esa misma página (403 si vienen de otra máquina de la
+red o de otra web), y no existen en la app de Vercel, donde la tarjeta no aparece. Un solo bot a la vez
+(invariante 7). Con `ARBITRO_ENABLED=true` en `.env`, el bot sigue arrancando solo como antes.
+
 Para que funcione, el árbitro debe aceptar peticiones desde el navegador (CORS). El árbitro de prueba en
 Vercel lo hace; el oficial se confirma el jueves. Si no lo permite, el panel muestra "No se pudo conectar"
 y queda `curl` como respaldo.
