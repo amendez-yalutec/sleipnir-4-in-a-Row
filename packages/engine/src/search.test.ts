@@ -3,7 +3,7 @@
  * para que sean deterministas.
  */
 import { describe, expect, it } from 'vitest';
-import { type Position, fromArbiterBoard, legalMoves, replay } from './rules.ts';
+import { type Cell, type Position, fromArbiterBoard, legalMoves, replay } from './rules.ts';
 import { WIN, search } from './search.ts';
 import { TranspositionTable } from './tt.ts';
 
@@ -119,5 +119,25 @@ describe('opciones', () => {
     expect(result.depth).toBeGreaterThan(0);
     expect(result.depth).toBeLessThan(56);
     expect(result.elapsedMs).toBeLessThan(60);
+  });
+});
+
+describe('valor del empate (contempt)', () => {
+  // Tablero lleno sin cuatro en línea (patrón (c/2 + fila) % 2) con dos casillas de arriba vacías:
+  // cualquier jugada termina en empate.
+  const board: Cell[][] = Array.from({ length: 7 }, (_, r) =>
+    Array.from({ length: 8 }, (_, c): Cell => ((((c >> 1) + r) % 2) + 1) as Cell),
+  );
+  board[6][0] = 0;
+  board[6][2] = 0;
+  const position = { board, toMove: 1 as const };
+
+  it('por defecto el empate vale 0', () => {
+    expect(search(position, { maxDepth: 4 }).score).toBe(0);
+  });
+
+  it('vale +score para el jugador indicado y −score para su rival', () => {
+    expect(search(position, { maxDepth: 4, contempt: { player: 1, score: 25 } }).score).toBe(25);
+    expect(search(position, { maxDepth: 4, contempt: { player: 2, score: 25 } }).score).toBe(-25);
   });
 });

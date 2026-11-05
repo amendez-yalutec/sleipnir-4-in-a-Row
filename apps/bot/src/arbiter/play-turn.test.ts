@@ -1,9 +1,17 @@
+import { type Position, replay } from '@equipo6/engine';
 import { describe, expect, it } from 'vitest';
 import { fallbackChooser } from '../chooser/fallback.ts';
-import type { MoveChooser } from '../chooser/types.ts';
+import type { Budget, MoveChooser } from '../chooser/types.ts';
 import type { Level } from '../log.ts';
 import { ArbiterHttpError } from './client.ts';
-import { SAFETY_MARGIN_MS, type TurnDeps, budgetFor, piecesOn, playTurn } from './play-turn.ts';
+import {
+  SAFETY_MARGIN_MS,
+  SECOND_PLAYER_DRAW_SCORE,
+  type TurnDeps,
+  budgetFor,
+  piecesOn,
+  playTurn,
+} from './play-turn.ts';
 import { type ArbiterTurn, type HttpResponse, parseNext } from './schema.ts';
 
 const EMPTY = Array.from({ length: 7 }, () => Array<number>(8).fill(0));
@@ -86,6 +94,50 @@ describe('presupuesto', () => {
 });
 
 describe('un turno', () => {
+  it('jugando segundo, el empate vale más (contempt); jugando primero, no', async () => {
+    const budgets: Budget[] = [];
+    const chooser: MoveChooser = {
+      choose: (_position, _legal, budget) => {
+        budgets.push(budget);
+        return Promise.resolve({ column: 3 });
+      },
+    };
+    const legal = { board: EMPTY, legal_moves: [0, 1, 2, 3, 4, 5, 6, 7] };
+    await playTurn(setup({ chooser }).deps, turnFrom({ ...legal, you: 2 }), 0);
+    await playTurn(setup({ chooser }).deps, turnFrom({ ...legal, you: 1 }), 0);
+    expect(budgets[0]?.contempt).toEqual({ player: 2, score: SECOND_PLAYER_DRAW_SCORE });
+    expect(budgets[1]?.contempt).toBeUndefined();
+  });
+
+  it('en una posición del libro juega la del libro sin buscar', async () => {
+    const moves = [3, 3, 3, 3, 3, 4, 4, 4, 4, 6, 7, 1, 4, 4, 3, 1, 4];
+    const state = replay(moves);
+    const arbiterBoard = state.board.map((row) => [...row]);
+    const chooser: MoveChooser = { choose: () => Promise.reject(new Error('no debería buscar')) };
+    const turn = turnFrom({ board: arbiterBoard, you: 2, legal_moves: [0, 1, 2, 3, 5, 6, 7] });
+    const { deps, sent, logs } = setup({ chooser });
+    await playTurn(deps, turn, 0);
+    expect(sent[0]?.column).toBe(1);
+    expect(logs.at(-1)).toMatchObject({ event: 'jugada', data: { source: 'libro' } });
+  });
+
+  it('tras una jugada aceptada piensa en el turno del rival (y no si la partida terminó)', async () => {
+    const pondered: Position[] = [];
+    const chooser: MoveChooser = {
+      choose: () => Promise.resolve({ column: 3 }),
+      ponder: (position) => pondered.push(position),
+    };
+    const empty = turnFrom({ board: EMPTY, you: 1, legal_moves: [0, 1, 2, 3, 4, 5, 6, 7] });
+    await playTurn(setup({ chooser }).deps, empty, 0);
+    expect(pondered).toHaveLength(1);
+    expect(pondered[0]?.toMove).toBe(2);
+    expect(pondered[0]?.board[0]?.[3]).toBe(1);
+
+    const won = [{ status: 200, body: { ok: true, state: 'won' } }];
+    await playTurn(setup({ chooser, replies: won }).deps, empty, 0);
+    expect(pondered).toHaveLength(1);
+  });
+
   it('el ejemplo inconsistente del OpenAPI → jugada legal y advertencias en el log', async () => {
     const { deps, sent, logs } = setup();
     const result = await playTurn(deps, turnFrom({}), 0);

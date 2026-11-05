@@ -17,7 +17,7 @@ import {
 } from './bitboard.ts';
 import { evaluate } from './eval.ts';
 import { CELLS, CENTER_ORDER, COLUMNS } from './geometry.ts';
-import type { Position } from './rules.ts';
+import type { Player, Position } from './rules.ts';
 import { BOUND_EXACT, BOUND_LOWER, BOUND_UPPER, TranspositionTable } from './tt.ts';
 
 export const WIN = 1_000;
@@ -40,6 +40,11 @@ export interface SearchOptions {
   readonly table?: TranspositionTable;
   /** Avisa al terminar cada profundidad (el worker reporta su mejor jugada hasta el momento). */
   readonly onDepth?: (result: SearchResult) => void;
+  /**
+   * Valor de un empate para `player` (el rival lo ve con signo contrario). Por defecto 0. Con un valor
+   * positivo, `player` prefiere un empate demostrado a una línea dudosa (jugando segundo en el torneo).
+   */
+  readonly contempt?: { readonly player: Player; readonly score: number };
 }
 
 export interface SearchResult {
@@ -71,17 +76,22 @@ class Searcher {
   readonly table: TranspositionTable | null;
   private readonly now: () => number;
   private readonly hardDeadline: number;
+  private readonly drawFor: Player;
+  private readonly drawScore: number;
 
   constructor(
     board: Bitboard,
     table: TranspositionTable | null,
     now: () => number,
     hardDeadline: number,
+    contempt: { readonly player: Player; readonly score: number } = { player: 1, score: 0 },
   ) {
     this.board = board;
     this.table = table;
     this.now = now;
     this.hardDeadline = hardDeadline;
+    this.drawFor = contempt.player;
+    this.drawScore = contempt.score;
   }
 
   /** Ordena `columns` (conjunto de bits) en `this.order[ply]` y devuelve cuántas son. */
@@ -122,7 +132,7 @@ class Searcher {
     }
     if (this.aborted) return 0;
     const b = this.board;
-    if (b.moves >= CELLS) return 0;
+    if (b.moves >= CELLS) return b.toMove === this.drawFor ? this.drawScore : -this.drawScore;
 
     // 1. ¿Gano ahora?
     const playLo = b.playableLo();
@@ -245,6 +255,7 @@ export function search(position: Position, options: SearchOptions = {}): SearchR
     options.table ?? new TranspositionTable(16),
     now,
     hardDeadline,
+    options.contempt,
   );
   const remaining = CELLS - board.moves;
   const maxDepth = Math.min(options.maxDepth ?? remaining, remaining);
