@@ -483,3 +483,15 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
   crear una práctica; las partidas creadas por otros (amistosos, liga, playoffs) no aparecían hasta
   recargar. Error de la IA: asumió que todas las partidas nacían desde el panel. Arreglo: el panel
   vuelve a consultar al árbitro cada 3 s (`TEAM_POLL_MS`), con prueba que falla sin el cambio.
+### 2026-11-05 — Manual de usuario (F8)
+
+- **Quién / herramienta:** Luis Godoy / Claude Code.
+- **Pedido:** el manual para alguien que no programa, con una captura por estado de la partida
+  (`PLAN_FRONTEND.md` §6 y F8).
+- **Qué devolvió:** `docs/MANUAL.md`, con las capturas de la corrida E2E del 5 de noviembre
+  (`01-19-54_automatico`, escritorio y celular) y dos de la pestaña Mi equipo en una prueba con el
+  árbitro simulado.
+- **Cómo lo verificamos:** cada texto que el manual cita (botones, avisos, veredictos de «Cómo pensó el
+  bot») se comparó con el código de `apps/web/src`, y lo que hacen Deshacer y Reiniciar con
+  `game/reducer.ts`; los niveles, con el README. Enlaces e imágenes revisados con un script.
+
