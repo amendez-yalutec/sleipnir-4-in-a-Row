@@ -18,4 +18,6 @@ export interface Choice {
 /** Quien elige la jugada: en B4 la de respaldo; desde B6/B8 la búsqueda en un worker. */
 export interface MoveChooser {
   choose(position: Position, legalMoves: readonly number[], budget: Budget): Promise<Choice>;
+  /** Pensar durante el turno del rival (opcional): se corta solo cuando llega el próximo `choose`. */
+  ponder?(position: Position): void;
 }

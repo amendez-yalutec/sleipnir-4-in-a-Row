@@ -502,3 +502,10 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
   de la IA: al principio propuso cambiar solo el `.env`. Arreglo: topes 0.6/0.72 (máximo 2,160 ms),
   apertura con 0.6 · soft y medio juego (jugadas 6–24) con soft = hard; valores por defecto 1800/2200.
   Medición en la laptop del torneo: peor búsqueda 1,867 ms.
+
+- **5 nov, 9:45 — pensar en el turno del rival.** La derrota contra Odd Times (`g_f7ea9774`) vino de la
+  jugada 18: una trampa a 29 jugadas que el motor vio con 4 s y no con 1.26 s. Se agregó búsqueda en el
+  turno del rival, que llena la tabla de transposición del worker y se corta al llegar el turno. Error de
+  la IA atrapado por las pruebas: si la bandera de corte ya estaba puesta al arrancar, el reloj devolvía
+  `Infinity` como hora de inicio y el plazo también era `Infinity`, así que la búsqueda no se cortaba.
+  Arreglo: la primera lectura del reloj siempre es real y, con la bandera puesta, no se busca.

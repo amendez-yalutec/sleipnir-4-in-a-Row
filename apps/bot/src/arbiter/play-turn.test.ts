@@ -1,3 +1,4 @@
+import type { Position } from '@equipo6/engine';
 import { describe, expect, it } from 'vitest';
 import { fallbackChooser } from '../chooser/fallback.ts';
 import type { MoveChooser } from '../chooser/types.ts';
@@ -86,6 +87,23 @@ describe('presupuesto', () => {
 });
 
 describe('un turno', () => {
+  it('tras una jugada aceptada piensa en el turno del rival (y no si la partida terminó)', async () => {
+    const pondered: Position[] = [];
+    const chooser: MoveChooser = {
+      choose: () => Promise.resolve({ column: 3 }),
+      ponder: (position) => pondered.push(position),
+    };
+    const empty = turnFrom({ board: EMPTY, you: 1, legal_moves: [0, 1, 2, 3, 4, 5, 6, 7] });
+    await playTurn(setup({ chooser }).deps, empty, 0);
+    expect(pondered).toHaveLength(1);
+    expect(pondered[0]?.toMove).toBe(2);
+    expect(pondered[0]?.board[0]?.[3]).toBe(1);
+
+    const won = [{ status: 200, body: { ok: true, state: 'won' } }];
+    await playTurn(setup({ chooser, replies: won }).deps, empty, 0);
+    expect(pondered).toHaveLength(1);
+  });
+
   it('el ejemplo inconsistente del OpenAPI → jugada legal y advertencias en el log', async () => {
     const { deps, sent, logs } = setup();
     const result = await playTurn(deps, turnFrom({}), 0);

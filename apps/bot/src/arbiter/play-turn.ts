@@ -2,6 +2,7 @@
  * Un turno del torneo: elegir con red de seguridad, filtrar por `legal_moves` y enviar con reintentos.
  * Todo el tiempo se mide desde que se **recibió** el turno (invariante 6), nunca contra `served_at`.
  */
+import { play } from '@equipo6/engine';
 import { fallbackMove } from '../chooser/fallback.ts';
 import type { Budget, Choice, MoveChooser } from '../chooser/types.ts';
 import type { Logger } from '../log.ts';
@@ -144,8 +145,16 @@ export async function playTurn(deps: TurnDeps, turn: ArbiterTurn, receivedAt: nu
     result: result?.kind ?? 'sin_respuesta',
   };
 
-  if (result?.kind === 'accepted') deps.log('info', 'jugada', { ...entry, state: result.state });
-  else if (result?.kind === 'not_your_turn') deps.log('warn', 'jugada_409', entry);
+  if (result?.kind === 'accepted') {
+    deps.log('info', 'jugada', { ...entry, state: result.state });
+    if (result.state === 'playing' && turn.position) {
+      const rival = turn.you === 1 ? 2 : 1;
+      deps.chooser.ponder?.({
+        board: play(turn.position.board, guarded.column, turn.you),
+        toMove: rival,
+      });
+    }
+  } else if (result?.kind === 'not_your_turn') deps.log('warn', 'jugada_409', entry);
   else if (result?.kind === 'rejected') {
     // illegal_move o timeout: la partida se pierde. Severidad alta y visible.
     deps.log('error', 'jugada_rechazada', {
