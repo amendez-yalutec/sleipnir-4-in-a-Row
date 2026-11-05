@@ -123,5 +123,5 @@ export function useTeamPanel(
     });
 
   const state: TeamPanelState = { config, connected, phase, me, games, loading, notice };
-  return { state, save, refresh, practice, submit };
+  return { state, client, save, refresh, practice, submit };
 }

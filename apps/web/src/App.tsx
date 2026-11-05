@@ -86,7 +86,7 @@ export function App({ client, initialMoves = null, makeArbiterClient }: AppProps
       <Tabs view={view} />
       <main className="mx-auto max-w-5xl px-4 py-6">
         {view === 'team' ? (
-          <TeamPanel {...(makeArbiterClient && { makeClient: makeArbiterClient })} />
+          <TeamPanel api={client} {...(makeArbiterClient && { makeClient: makeArbiterClient })} />
         ) : state.phase === 'setup' ? (
           <SetupPanel
             humanFirst={state.humanFirst}

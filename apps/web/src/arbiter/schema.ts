@@ -38,6 +38,8 @@ export const submissionSchema = z.object({
   registered_at: z.string().optional(),
 });
 
+const moveRecord = z.object({ turn: z.number().int(), by: player, column: z.number().int() });
+
 const playerRef = z.object({
   team_id: z.string(),
   name: z.string(),
@@ -49,11 +51,25 @@ export const gameSummarySchema = z.object({
   kind: z.string(),
   status: z.string(),
   players: z.object({ '1': playerRef, '2': playerRef }),
-  moves: z.array(z.unknown()),
-  result: z.object({ winner: player.nullable(), reason: z.string() }).nullable().optional(),
+  moves: z.array(moveRecord),
+  current: player.nullable().optional(),
+  result: z
+    .object({
+      winner: player.nullable(),
+      reason: z.string(),
+      winning_cells: z.array(z.tuple([z.number().int(), z.number().int()])).optional(),
+    })
+    .nullable()
+    .optional(),
   finished_at: z.string().nullable().optional(),
 });
 export type GameSummary = z.infer<typeof gameSummarySchema>;
+
+/** `GET /api/games/{id}`: la partida con su tablero (`board[fila][columna]`, fila 0 abajo). */
+export const gameDetailSchema = gameSummarySchema.extend({
+  board: z.array(z.array(z.number().int().min(0).max(2)).length(8)).length(7),
+});
+export type GameDetail = z.infer<typeof gameDetailSchema>;
 
 export const gamesSchema = z.array(gameSummarySchema);
 

@@ -3,7 +3,7 @@
  * `packages/engine` y una búsqueda corta y determinista. Sirve para probar la pantalla sin servidor.
  * No entra al build de producción: solo lo importan las pruebas.
  */
-import type { GameState, Health } from '@equipo6/contracts';
+import type { ControlStatus, GameState, Health } from '@equipo6/contracts';
 import { IllegalMoveError, replay, search } from '@equipo6/engine';
 import type { ApiClient, ApiResult } from './types.ts';
 
@@ -26,8 +26,26 @@ export interface FakeClient extends ApiClient {
   readonly calls: string[];
 }
 
-export function createFakeClient(options: { depth?: number } = {}): FakeClient {
+export function createFakeClient(options: { depth?: number; control?: boolean } = {}): FakeClient {
   let fail = false;
+  // Bot del torneo simulado: solo existe si `control` (como el servidor de la laptop).
+  let listening: { host: string } | null = null;
+  const controlStatus = (): ControlStatus => ({
+    running: listening !== null,
+    arbiterHost: listening?.host ?? null,
+    arbiter: {
+      enabled: listening !== null,
+      state: listening ? 'waiting' : 'disabled',
+      lastTurnAt: null,
+      gamesPlayed: 0,
+    },
+  });
+  const noControl = <T>(): ApiResult<T> => ({
+    ok: false,
+    kind: 'failed',
+    code: 'not_found',
+    message: 'El servidor no reconoce esa petición.',
+  });
   const calls: string[] = [];
   const failure = <T>(): ApiResult<T> | null => {
     if (!fail) return null;
@@ -82,6 +100,21 @@ export function createFakeClient(options: { depth?: number } = {}): FakeClient {
         arbiter: { enabled: false, state: 'disabled', lastTurnAt: null, gamesPlayed: 0 },
       };
       return Promise.resolve({ ok: true, data: health });
+    },
+    control() {
+      return Promise.resolve(options.control ? { ok: true, data: controlStatus() } : noControl());
+    },
+    startListening(url) {
+      calls.push(`start ${url}`);
+      if (!options.control) return Promise.resolve(noControl());
+      listening = { host: new URL(url).host };
+      return Promise.resolve({ ok: true, data: controlStatus() });
+    },
+    stopListening() {
+      calls.push('stop');
+      if (!options.control) return Promise.resolve(noControl());
+      listening = null;
+      return Promise.resolve({ ok: true, data: controlStatus() });
     },
   };
 }
