@@ -17,6 +17,8 @@ import {
 } from './rules.ts';
 
 const RUNS = 500;
+// 500 partidas tardan ~5.5 s en GitHub Actions; el límite por defecto de Vitest es 5 s.
+const SLOW_CI_TIMEOUT_MS = 30_000;
 
 function naiveWinner(board: Board): Player | null {
   const at = (row: number, column: number) => board[row]?.[column];
@@ -67,30 +69,34 @@ const legalGame = fc.array(fc.nat(), { minLength: 56, maxLength: 56 }).map((choi
 });
 
 describe('propiedades de las reglas', () => {
-  it('en cada paso de una partida al azar el estado es coherente', () => {
-    fc.assert(
-      fc.property(legalGame, (moves) => {
-        for (let n = 0; n <= moves.length; n++) {
-          const state = replay(moves.slice(0, n));
-          const pieces = state.board.flat().filter((cell) => cell !== 0).length;
+  it(
+    'en cada paso de una partida al azar el estado es coherente',
+    () => {
+      fc.assert(
+        fc.property(legalGame, (moves) => {
+          for (let n = 0; n <= moves.length; n++) {
+            const state = replay(moves.slice(0, n));
+            const pieces = state.board.flat().filter((cell) => cell !== 0).length;
 
-          expect(pieces).toBe(n);
-          expect(hasGravity(state.board)).toBe(true);
-          expect(state.winner).toBe(naiveWinner(state.board));
-          expect(winner(state.board)).toBe(state.winner);
-          if (state.status === 'playing') {
-            expect(state.legalMoves).toEqual(legalMoves(state.board));
-            expect(state.toMove).toBe(n % 2 === 0 ? 1 : 2);
-          } else {
-            expect(state.legalMoves).toEqual([]);
+            expect(pieces).toBe(n);
+            expect(hasGravity(state.board)).toBe(true);
+            expect(state.winner).toBe(naiveWinner(state.board));
+            expect(winner(state.board)).toBe(state.winner);
+            if (state.status === 'playing') {
+              expect(state.legalMoves).toEqual(legalMoves(state.board));
+              expect(state.toMove).toBe(n % 2 === 0 ? 1 : 2);
+            } else {
+              expect(state.legalMoves).toEqual([]);
+            }
+            // Solo puede terminar la última jugada de la lista.
+            if (n < moves.length) expect(state.status).toBe('playing');
           }
-          // Solo puede terminar la última jugada de la lista.
-          if (n < moves.length) expect(state.status).toBe('playing');
-        }
-      }),
-      { numRuns: RUNS },
-    );
-  });
+        }),
+        { numRuns: RUNS },
+      );
+    },
+    SLOW_CI_TIMEOUT_MS,
+  );
 
   it('replay acepta la lista hasta la primera jugada ilegal y señala exactamente esa', () => {
     const anyColumns = fc.array(fc.integer({ min: -1, max: 8 }), { maxLength: 70, size: 'max' });
