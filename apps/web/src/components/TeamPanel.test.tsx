@@ -226,4 +226,55 @@ describe('panel Mi equipo', () => {
     expect(screen.getByRole('heading', { name: 'Partida g_p_10' })).toBeTruthy();
     expect(teamGames.mock.calls.length).toBeGreaterThan(before);
   });
+
+  it('al crear otra práctica, el tablero pasa de la partida terminada a la nueva', async () => {
+    // Primera práctica en curso que termina; luego el panel crea la segunda.
+    const finished = new Set<string>();
+    const games: string[] = ['g_p_11'];
+    const summary = (id: string) => ({ ...detail(id, finished.has(id)), board: undefined });
+    openPanel(
+      fakeArbiter({
+        teamGames: () => Promise.resolve([...games].reverse().map(summary)),
+        game: (id: string) => {
+          const next = detail(id, finished.has(id));
+          finished.add(id); // cada partida se ve en curso una vez y luego terminada
+          return Promise.resolve(next);
+        },
+        practice: () => {
+          games.push('g_p_12');
+          return Promise.resolve({ game_id: 'g_p_12' });
+        },
+      }),
+    );
+    await connect();
+    expect(await screen.findByRole('heading', { name: 'Partida g_p_11' })).toBeTruthy();
+    expect(
+      await screen.findAllByText('Ganamos por cuatro en línea', {}, { timeout: 4000 }),
+    ).toHaveLength(2);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Crear práctica' }));
+    expect(await screen.findByRole('heading', { name: 'Partida g_p_12' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Partida g_p_11' })).toBeNull();
+  });
+
+  it('la partida en curso tiene prioridad; al cerrarla se puede ver una terminada', async () => {
+    const live = { ...detail('g_p_09', false), board: undefined };
+    const done = { ...detail('g_1', true), board: undefined };
+    openPanel(
+      fakeArbiter({
+        teamGames: () => Promise.resolve([live, done]),
+        game: (id: string) => Promise.resolve(detail(id, id !== 'g_p_09')),
+      }),
+    );
+    await connect();
+    expect(await screen.findByRole('heading', { name: 'Partida g_p_09' })).toBeTruthy();
+    const finishedButton = screen.getByRole('button', { name: 'Ver tablero de g_1' });
+    expect(finishedButton.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText(/Hay una partida en curso/)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ver tablero de g_1' }));
+    expect(await screen.findByRole('heading', { name: 'Partida g_1' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ver tablero de g_1' }).textContent).toBe('Viendo');
+  });
 });
