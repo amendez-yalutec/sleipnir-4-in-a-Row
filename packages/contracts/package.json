@@ -1,0 +1,16 @@
+{
+  "name": "@equipo6/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contrato entre la API de la app y la web: esquemas zod y tipos compartidos.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}
