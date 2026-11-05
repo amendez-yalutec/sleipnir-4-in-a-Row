@@ -65,14 +65,14 @@ export interface TeamPanelProps {
 export function TeamPanel({ api, makeClient }: TeamPanelProps) {
   const { state, client, save, refresh, practice, submit } = useTeamPanel(makeClient);
   const { config, me, games, notice } = state;
-  // Partida en el tablero, por prioridad: la que eligió la persona con un clic; si no, la que el
-  // equipo está jugando; si no, la última que terminó en pantalla (para ver el resultado). Una
-  // partida terminada nunca tapa a una nueva en curso.
+  // Partida en el tablero, por prioridad: la que el equipo está jugando (salvo que la cierren); si
+  // no, la que eligieron con "Ver tablero"; si no, la última que terminó en pantalla, para ver el
+  // resultado. Una partida terminada nunca tapa a una en curso.
   const [chosen, setChosen] = useState<string | null>(null);
   const [finishedShown, setFinishedShown] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
   const live = games.find((game) => game.status === 'playing' && game.game_id !== dismissed);
-  const shown = chosen ?? live?.game_id ?? finishedShown;
+  const shown = live?.game_id ?? chosen ?? finishedShown;
 
   return (
     <div className="space-y-6">
@@ -159,28 +159,49 @@ export function TeamPanel({ api, makeClient }: TeamPanelProps) {
           {games.length === 0 ? (
             <p className="text-sm text-muted">Todavía no hay partidas de {config.teamId}.</p>
           ) : (
-            <ul className="divide-y divide-line">
-              {games.slice(0, 20).map((game) => (
-                <li key={game.game_id}>
-                  <button
-                    type="button"
-                    aria-label={`Ver tablero de ${game.game_id}`}
-                    aria-current={game.game_id === shown ? 'true' : undefined}
-                    onClick={() => setChosen(game.game_id)}
-                    className={cn(
-                      'flex w-full flex-wrap justify-between gap-2 rounded-control px-2 py-2 text-left text-sm hover:bg-subtle focus-visible:ring-4 focus-visible:ring-halo focus-visible:outline-none',
-                      game.game_id === shown && 'bg-subtle',
-                    )}
-                  >
-                    <span>
-                      {game.players['1'].name} vs {game.players['2'].name}
-                      <span className="text-muted"> · {KINDS[game.kind] ?? game.kind}</span>
-                    </span>
-                    <span className="text-muted">{outcome(game, config.teamId)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <>
+              {live && (
+                <p className="mb-2 text-xs text-muted">
+                  Hay una partida en curso: el tablero muestra esa. Ciérrala para ver otra.
+                </p>
+              )}
+              <ul className="divide-y divide-line">
+                {games.slice(0, 20).map((game) => {
+                  const viewing = game.game_id === shown;
+                  const blocked = live !== undefined && game.game_id !== live.game_id;
+                  return (
+                    <li
+                      key={game.game_id}
+                      className={cn(
+                        'flex flex-wrap items-center justify-between gap-2 rounded-control px-2 py-2 text-sm',
+                        viewing && 'bg-subtle',
+                      )}
+                    >
+                      <span>
+                        {game.players['1'].name} vs {game.players['2'].name}
+                        <span className="text-muted"> · {KINDS[game.kind] ?? game.kind}</span>
+                      </span>
+                      <span className="flex items-center gap-3">
+                        <span className="text-muted">{outcome(game, config.teamId)}</span>
+                        <Button
+                          variant="secondary"
+                          className="min-h-9 px-3 text-sm"
+                          aria-label={`Ver tablero de ${game.game_id}`}
+                          aria-pressed={viewing}
+                          disabled={viewing || blocked}
+                          onClick={() => {
+                            setChosen(game.game_id);
+                            setFinishedShown(null);
+                          }}
+                        >
+                          {viewing ? 'Viendo' : 'Ver tablero'}
+                        </Button>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </Card>
       )}

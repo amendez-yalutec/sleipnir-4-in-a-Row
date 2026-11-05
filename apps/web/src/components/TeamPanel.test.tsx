@@ -256,4 +256,25 @@ describe('panel Mi equipo', () => {
     expect(await screen.findByRole('heading', { name: 'Partida g_p_12' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Partida g_p_11' })).toBeNull();
   });
+
+  it('la partida en curso tiene prioridad; al cerrarla se puede ver una terminada', async () => {
+    const live = { ...detail('g_p_09', false), board: undefined };
+    const done = { ...detail('g_1', true), board: undefined };
+    openPanel(
+      fakeArbiter({
+        teamGames: () => Promise.resolve([live, done]),
+        game: (id: string) => Promise.resolve(detail(id, id !== 'g_p_09')),
+      }),
+    );
+    await connect();
+    expect(await screen.findByRole('heading', { name: 'Partida g_p_09' })).toBeTruthy();
+    const finishedButton = screen.getByRole('button', { name: 'Ver tablero de g_1' });
+    expect(finishedButton.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText(/Hay una partida en curso/)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ver tablero de g_1' }));
+    expect(await screen.findByRole('heading', { name: 'Partida g_1' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ver tablero de g_1' }).textContent).toBe('Viendo');
+  });
 });
