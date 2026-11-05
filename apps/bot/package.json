@@ -1,0 +1,22 @@
+{
+  "name": "@equipo6/bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Servicio del bot: cliente del árbitro del torneo y, desde B9, la API de la app web.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@equipo6/contracts": "0.1.0",
+    "@equipo6/engine": "0.1.0",
+    "@fastify/helmet": "^13.2.0",
+    "@fastify/rate-limit": "^11.2.1",
+    "@fastify/static": "^10.1.10",
+    "fastify": "^5.12.8",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@equipo6/mock-arbiter": "0.1.0"
+  }
+}
