@@ -5,7 +5,7 @@
 import { play } from '@equipo6/engine';
 import { bookMove } from '../chooser/book.ts';
 import { fallbackMove } from '../chooser/fallback.ts';
-import type { Budget, Choice, MoveChooser } from '../chooser/types.ts';
+import type { Budget, Choice, Contempt, MoveChooser } from '../chooser/types.ts';
 import type { Logger } from '../log.ts';
 import type { ArbiterClient } from './client.ts';
 import { guardColumn, mostCentral } from './guard.ts';
@@ -31,6 +31,16 @@ export const SAFETY_MARGIN_MS = 100;
 export const OPENING_PLIES = 6;
 /** Hasta aquí va el medio juego, donde se decide la partida: ahí se usa el tiempo completo. */
 export const MIDGAME_LAST_PLY = 24;
+/**
+ * Jugando segundo, un empate vale esto para nosotros (la escala del motor: victoria = 1,000; las
+ * posiciones parejas del medio juego valen entre −30 y +30). Preferimos empatar a arriesgar perder.
+ */
+export const SECOND_PLAYER_DRAW_SCORE = 25;
+
+/** Valor del empate según el asiento: solo jugando segundo. */
+export function contemptFor(you: 1 | 2): Contempt | undefined {
+  return you === 2 ? { player: 2, score: SECOND_PLAYER_DRAW_SCORE } : undefined;
+}
 
 /** Fichas en el tablero (= jugadas hechas). */
 export function piecesOn(board: readonly (readonly number[])[]): number {
@@ -116,12 +126,16 @@ export async function playTurn(deps: TurnDeps, turn: ArbiterTurn, receivedAt: nu
   for (const warning of turn.warnings)
     deps.log('warn', 'turno_inconsistente', { ...base, warning });
 
-  const budget = budgetFor(
-    turn.deadlineMs,
-    deps.thinkSoftMs,
-    deps.thinkHardMs,
-    turn.position ? piecesOn(turn.position.board) : undefined,
-  );
+  const contempt = contemptFor(turn.you);
+  const budget: Budget = {
+    ...budgetFor(
+      turn.deadlineMs,
+      deps.thinkSoftMs,
+      deps.thinkHardMs,
+      turn.position ? piecesOn(turn.position.board) : undefined,
+    ),
+    ...(contempt && { contempt }),
+  };
   const decided = await choose(deps, turn, budget);
   const guarded = guardColumn(decided.column, turn.legalMoves);
   if (guarded.column === null) {
@@ -152,10 +166,10 @@ export async function playTurn(deps: TurnDeps, turn: ArbiterTurn, receivedAt: nu
     deps.log('info', 'jugada', { ...entry, state: result.state });
     if (result.state === 'playing' && turn.position) {
       const rival = turn.you === 1 ? 2 : 1;
-      deps.chooser.ponder?.({
-        board: play(turn.position.board, guarded.column, turn.you),
-        toMove: rival,
-      });
+      deps.chooser.ponder?.(
+        { board: play(turn.position.board, guarded.column, turn.you), toMove: rival },
+        contempt,
+      );
     }
   } else if (result?.kind === 'not_your_turn') deps.log('warn', 'jugada_409', entry);
   else if (result?.kind === 'rejected') {

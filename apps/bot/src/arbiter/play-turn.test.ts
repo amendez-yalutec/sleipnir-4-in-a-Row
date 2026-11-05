@@ -1,10 +1,17 @@
 import { type Position, replay } from '@equipo6/engine';
 import { describe, expect, it } from 'vitest';
 import { fallbackChooser } from '../chooser/fallback.ts';
-import type { MoveChooser } from '../chooser/types.ts';
+import type { Budget, MoveChooser } from '../chooser/types.ts';
 import type { Level } from '../log.ts';
 import { ArbiterHttpError } from './client.ts';
-import { SAFETY_MARGIN_MS, type TurnDeps, budgetFor, piecesOn, playTurn } from './play-turn.ts';
+import {
+  SAFETY_MARGIN_MS,
+  SECOND_PLAYER_DRAW_SCORE,
+  type TurnDeps,
+  budgetFor,
+  piecesOn,
+  playTurn,
+} from './play-turn.ts';
 import { type ArbiterTurn, type HttpResponse, parseNext } from './schema.ts';
 
 const EMPTY = Array.from({ length: 7 }, () => Array<number>(8).fill(0));
@@ -87,6 +94,21 @@ describe('presupuesto', () => {
 });
 
 describe('un turno', () => {
+  it('jugando segundo, el empate vale más (contempt); jugando primero, no', async () => {
+    const budgets: Budget[] = [];
+    const chooser: MoveChooser = {
+      choose: (_position, _legal, budget) => {
+        budgets.push(budget);
+        return Promise.resolve({ column: 3 });
+      },
+    };
+    const legal = { board: EMPTY, legal_moves: [0, 1, 2, 3, 4, 5, 6, 7] };
+    await playTurn(setup({ chooser }).deps, turnFrom({ ...legal, you: 2 }), 0);
+    await playTurn(setup({ chooser }).deps, turnFrom({ ...legal, you: 1 }), 0);
+    expect(budgets[0]?.contempt).toEqual({ player: 2, score: SECOND_PLAYER_DRAW_SCORE });
+    expect(budgets[1]?.contempt).toBeUndefined();
+  });
+
   it('en una posición del libro juega la del libro sin buscar', async () => {
     const moves = [3, 3, 3, 3, 3, 4, 4, 4, 4, 6, 7, 1, 4, 4, 3, 1, 4];
     const state = replay(moves);

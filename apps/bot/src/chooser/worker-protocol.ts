@@ -1,5 +1,5 @@
 import type { Position } from '@equipo6/engine';
-import type { Choice } from './types.ts';
+import type { Choice, Contempt } from './types.ts';
 
 /** Mensaje del hilo principal al worker. */
 export interface SearchJob {
@@ -9,6 +9,7 @@ export interface SearchJob {
   readonly softMs: number;
   readonly hardMs: number;
   readonly maxDepth?: number;
+  readonly contempt?: Contempt;
   /** Búsqueda en el turno del rival: solo llena la tabla; se corta con la bandera compartida. */
   readonly ponder?: true;
 }

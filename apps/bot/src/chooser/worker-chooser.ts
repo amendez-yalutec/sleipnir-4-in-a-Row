@@ -6,7 +6,7 @@
  */
 import { Worker } from 'node:worker_threads';
 import { type Position, legalMoves as legalColumns } from '@equipo6/engine';
-import type { Budget, Choice, MoveChooser } from './types.ts';
+import type { Budget, Choice, Contempt, MoveChooser } from './types.ts';
 import type { SearchJob, WorkerMessage } from './worker-protocol.ts';
 
 export class BusyError extends Error {
@@ -65,7 +65,7 @@ export class WorkerChooser implements MoveChooser {
    * Piensa en el turno del rival: busca `position` (le toca al rival) para llenar la tabla de
    * transposición. Solo si el worker está libre; el próximo `choose` la corta en menos de 1 ms.
    */
-  ponder(position: Position): void {
+  ponder(position: Position, contempt?: Contempt): void {
     if (this.#closed || this.#pondering || this.#running || this.#queue.length > 0) return;
     const worker = this.#worker;
     if (!worker) return;
@@ -78,6 +78,7 @@ export class WorkerChooser implements MoveChooser {
       softMs: PONDER_MS,
       hardMs: PONDER_MS,
       ponder: true,
+      ...(contempt && { contempt }),
     };
     worker.postMessage(job);
   }
@@ -105,6 +106,7 @@ export class WorkerChooser implements MoveChooser {
         softMs: budget.softMs,
         hardMs: budget.hardMs,
         ...(budget.maxDepth !== undefined && { maxDepth: budget.maxDepth }),
+        ...(budget.contempt && { contempt: budget.contempt }),
       };
       this.#queue.push({ job, resolve, reject });
       if (this.#pondering) Atomics.store(this.#stop, 0, 1); // el trabajo arranca al llegar `pondered`

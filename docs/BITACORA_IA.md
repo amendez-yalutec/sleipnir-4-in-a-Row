@@ -516,3 +516,9 @@ decisión, o cuando una verificación nuestra descubre algo. No hace falta regis
   demostrada a 34 jugadas; ni con más tiempo ni pensando en el turno del rival el motor la encontraba
   (llegaba a profundidad 25). Se agregó `apps/bot/src/chooser/book.ts` con esa posición y su espejo.
   Verificado: tras la jugada del libro, el bot con 2,160 ms le gana a nuestro motor con 4.5 s.
+
+- **5 nov, 9:55 — preferir empatar a perder jugando segundo.** Pedido del equipo: jugando segundo,
+  mejor un empate que una derrota. El motor valía el empate como 0, casi igual que una línea dudosa de
+  −4. Se agregó `contempt` al motor (opción inyectada, sigue puro): jugando segundo, un empate vale +25
+  para nosotros (escala: victoria = 1,000; posiciones parejas entre −30 y +30). Una victoria demostrada
+  sigue valiendo más que cualquier empate. Aplica también al pensar en el turno del rival.

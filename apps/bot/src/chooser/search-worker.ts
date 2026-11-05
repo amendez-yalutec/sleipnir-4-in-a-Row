@@ -42,6 +42,7 @@ parentPort?.on('message', (job: SearchJob) => {
         softMs: job.softMs,
         hardMs: job.hardMs,
         now: ponderClock(),
+        ...(job.contempt && { contempt: job.contempt }),
       });
     } catch {
       // Solo llenaba la tabla: un fallo aquí no afecta al turno siguiente.
@@ -53,6 +54,7 @@ parentPort?.on('message', (job: SearchJob) => {
     const { column, depth, nodes, score } = search(job.position, {
       legalMoves: job.legalMoves,
       table,
+      ...(job.contempt && { contempt: job.contempt }),
       ...(job.maxDepth === undefined
         ? { softMs: job.softMs, hardMs: job.hardMs, now: () => performance.now() }
         : { maxDepth: job.maxDepth }),
